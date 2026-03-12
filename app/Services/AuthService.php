@@ -22,9 +22,11 @@ class AuthService
             } else {
 
                 $token = $user->createToken('api-token')->plainTextToken;
+                $role=DB::table("roles")->where("id",$user->role_id)->first();
                 return [
                     "message" => "Login successful",
                     "status" => 200,
+                    "role"   =>$role->name,
                     "token" => $token
                 ];
             }
