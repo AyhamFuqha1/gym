@@ -100,7 +100,7 @@ class AuthController extends Controller
     {
        $request->validate([
         "email" => "required|email"
-       ])
+       ]);
         try {
             $res = $this->authService->forgotPassword($request->email);
             if (!$res) {
