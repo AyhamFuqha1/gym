@@ -54,19 +54,26 @@ class AuthController extends Controller
     public function register(RegisterRequest $request)
     {
         try {
-            //       $this->authorize('create', User::class);
-            $admin = ["id" => 1];
-            $register = $this->authService->register($request, $admin);
-            if ($register) {
-                return response()->json(true, 200);
-            } else {
-                return response()->json(false, 500);
+            $user = $request->user();/////////////
+
+            if (!$user) {
+                return response()->json([
+                    'message' => 'Unauthorized'
+                ], 401);
             }
-        } catch (AuthorizationException $e) {
-            return response()->json(
-                ['message' => $e->getMessage()],
-                403
-            );
+
+            $register = $this->authService->register($request, $user);
+
+            if ($register['status'] !== 200) {
+                return response()->json([
+                    'message' => $register['message']
+                ], $register['status']);
+            }
+
+            return response()->json([
+                'message' => $register['message']
+            ], 200);
+
         } catch (Throwable $e) {
             return response()->json([
                 'message' => $e->getMessage(),
@@ -100,7 +107,7 @@ class AuthController extends Controller
     {
        $request->validate([
         "email" => "required|email"
-       ])
+       ]);
         try {
             $res = $this->authService->forgotPassword($request->email);
             if (!$res) {
@@ -123,7 +130,7 @@ class AuthController extends Controller
         }
     }
 
-    public function verifyOTP(verifyOTPRequest $request)
+    /*public function verifyOTP(verifyOTPRequest $request)
     {
         try {
             $res = $this->authService->verifyOTP($request->OTP,$request->email);
@@ -144,8 +151,34 @@ class AuthController extends Controller
                 'trace' => $e->getTraceAsString(),
             ], 500);
         }
-    }
-    public function restetPassword(resetPasswordRequest $request)
+    }*/
+
+    public function verifyOTP(verifyOTPRequest $request)
+    {
+        try {
+            $resetToken = $this->authService->verifyOTP($request->OTP, $request->email);
+
+            if (!$resetToken) {
+                return response()->json([
+                    "message" => "OTP is incorrect"
+                ], 403);
+            }
+
+            return response()->json([
+                "message" => "OTP is correct",
+                "reset_token" => $resetToken
+            ], 200);
+
+        } catch (Throwable $e) {
+            return response()->json([
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString(),
+            ], 500);
+        }
+    }    
+    /*public function restetPassword(resetPasswordRequest $request)
     {
         try {
             $res = $this->authService->resetPassword($request->password, $request->email);
@@ -158,6 +191,35 @@ class AuthController extends Controller
                     "message" => "Update Password"
                 ], 201);
             }
+        } catch (Throwable $e) {
+            return response()->json([
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString(),
+            ], 500);
+        }
+    }*/
+
+
+    public function restetPassword(resetPasswordRequest $request)
+    {
+        try {
+            $res = $this->authService->resetPassword(
+                $request->password,
+                $request->reset_token
+            );
+
+            if (!$res) {
+                return response()->json([
+                    "message" => "Invalid reset token"
+                ], 403);
+            }
+
+            return response()->json([
+                "message" => "Update Password"
+            ], 200);
+
         } catch (Throwable $e) {
             return response()->json([
                 'message' => $e->getMessage(),

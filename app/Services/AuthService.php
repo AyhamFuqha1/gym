@@ -35,7 +35,7 @@ class AuthService
         });
     }
 
-    public function register($data, $admin)
+    /*public function register($data, $admin)
     {
         return DB::transaction(function () use ($data, $admin) {
             //$tempPassword = random_int(10000000, 99999999);
@@ -44,7 +44,52 @@ class AuthService
             //  SsendRegisterEmailJob::dispatch($data->email, $data->name, $tempPassword);
             return true;
         });
-    }
+    }*/
+
+   public function register($data, $currentUser)
+    {
+        return DB::transaction(function () use ($data, $currentUser) {
+            $currentRoleId = (int) $currentUser->role_id;
+            $targetRoleId = (int) $data->role_id;
+
+            $allowedRoles = [
+                1 => [2, 3, 4], // manager -> admin, coach, user
+                2 => [3, 4],    // admin -> coach, user
+                3 => [4],       // coach -> user
+                4 => [],        // user -> nobody
+            ];
+
+            if (!isset($allowedRoles[$currentRoleId])) {
+                return [
+                    'status' => 403,
+                    'message' => 'Your role is not allowed to create users'
+                ];
+            }
+
+            if (!in_array($targetRoleId, $allowedRoles[$currentRoleId], true)) {
+                return [
+                    'status' => 403,
+                    'message' => 'You are not allowed to create this role'
+                ];
+            }
+
+            $tempPassword = 123456;
+
+            DB::table('users')->insert([
+                'name' => $data->name,
+                'email' => $data->email,
+                'password' => Hash::make($tempPassword),
+                'role_id' => $targetRoleId,
+                'status' => 'active',
+                'created_at' => now(),
+            ]);
+
+            return [
+                'status' => 200,
+                'message' => 'User created successfully'
+            ];
+        });
+    }    
 
     public function logout($user)
     {
@@ -53,7 +98,7 @@ class AuthService
 
     }
 
-    public function forgotPassword($email)
+    /*public function forgotPassword($email)
     {
         $OTP = random_int(10000000, 99999999);
         $user = DB::table("users")->where("email", $email)->first();
@@ -66,8 +111,31 @@ class AuthService
             return true;
         }
 
+    }*/
+
+
+    public function forgotPassword($email)
+    {
+        $OTP = random_int(10000000, 99999999);
+        $user = DB::table("users")->where("email", $email)->first();
+
+        if (!$user) {
+            return false;
+        }
+
+        DB::table("password_reset_tokens")->where("email", $email)->delete();
+
+        DB::table("password_reset_tokens")->insert([
+            "email" => $email,
+            "token" => $OTP,
+            "created_at" => now(),
+        ]);
+
+        SendOTPJob::dispatch($email, $user->name, $OTP);
+
+        return true;
     }
-    public function verifyOTP($OTP, $email)
+    /*public function verifyOTP($OTP, $email)
     {
         $res = DB::table("password_reset_tokens")->where("email", $email)->where("token", $OTP)->where("created_at", ">", now()->subMinutes(2))->first();
         if (!$res) {
@@ -78,8 +146,32 @@ class AuthService
 
         }
 
+    }*/
+
+    public function verifyOTP($OTP, $email)
+    {
+        $res = DB::table("password_reset_tokens")
+            ->where("email", $email)
+            ->where("token", $OTP)
+            ->where("created_at", ">", now()->subMinutes(2))
+            ->first();
+
+        if (!$res) {
+            return false;
+        }
+
+        $resetToken = bin2hex(random_bytes(32));
+
+        DB::table("password_reset_tokens")
+            ->where("email", $email)
+            ->update([
+                "token" => $resetToken,
+                "created_at" => now(),
+            ]);
+
+        return $resetToken;
     }
-    public function resetPassword($restetPasseord, $email)
+    /*public function resetPassword($restetPasseord, $email)
     {
         return
             DB::transaction(function () use ($restetPasseord, $email) {
@@ -88,5 +180,31 @@ class AuthService
                 return true;
             });
 
+    }*/
+
+    public function resetPassword($password, $resetToken)
+    {
+        return DB::transaction(function () use ($password, $resetToken) {
+            $record = DB::table("password_reset_tokens")
+                ->where("token", $resetToken)
+                ->first();
+
+            if (!$record) {
+                return false;
+            }
+
+            DB::table("users")
+                ->where("email", $record->email)
+                ->update([
+                    "password" => Hash::make($password)
+                ]);
+
+            DB::table("password_reset_tokens")
+                ->where("email", $record->email)
+                ->delete();
+
+            return true;
+        });
     }
+
 }
