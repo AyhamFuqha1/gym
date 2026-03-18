@@ -3,6 +3,7 @@
 
 
 use App\Http\Controllers\api\AuthController;
+use App\Http\Controllers\MembersController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -21,4 +22,6 @@ Route::get('/profile/{id}', [ProfileController::class, 'show']);
 Route::post('/profile', [ProfileController::class, 'store']);
 Route::put('/profile/{id}', [ProfileController::class, 'update']);
 Route::delete('/profile/{id}', [ProfileController::class, 'destroy']);
-
+/*-----*/
+Route::get('/members',[MembersController::class,'index']);
+Route::get('/members',[MembersController::class,'store']);
