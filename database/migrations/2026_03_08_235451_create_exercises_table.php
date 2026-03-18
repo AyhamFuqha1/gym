@@ -15,8 +15,8 @@ return new class extends Migration {
             $table->foreignId('general_exercise_id')->constrained()->cascadeOnDelete();
             $table->string('difficulty_level');
             $table->string('video_url')->nullable();
-            $table->integer('duration_weeks')->nullable();
-            $table->string('goal_type')->nullable();
+            $table->string('instructions')->nullable();
+            $table->string('common_mistakes')->nullable();
         });
     }
 
