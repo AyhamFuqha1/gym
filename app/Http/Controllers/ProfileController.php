@@ -16,9 +16,6 @@ class ProfileController extends Controller
         $this->profileService = $profileService;
     }
 
-    /**
-     * Store new profile
-     */
     public function store(ProfileRequest $request): JsonResponse
     {
         $profile = $this->profileService->createProfile($request->validated());
@@ -30,9 +27,7 @@ class ProfileController extends Controller
         ], 201);
     }
 
-    /**
-     * Show profile
-     */
+    
     public function show(int $id): JsonResponse
     {
         $profile = $this->profileService->getProfile($id);
@@ -50,9 +45,7 @@ class ProfileController extends Controller
         ]);
     }
 
-    /**
-     * Update profile
-     */
+    
     public function update(UpdateProfileRequest $request, int $id): JsonResponse
     {
         $profile = $this->profileService->updateProfile($id, $request->validated());
@@ -71,9 +64,7 @@ class ProfileController extends Controller
         ]);
     }
 
-    /**
-     * Delete profile
-     */
+   
     public function destroy(int $id): JsonResponse
     {
         $deleted = $this->profileService->deleteProfile($id);

@@ -13,7 +13,7 @@ return new class extends Migration {
         Schema::create('program_exercises', function (Blueprint $table) {
             $table->id();
 
-            // FK
+        
             $table->foreignId('program_version_id')
                 ->constrained('program_versions')
                 ->cascadeOnDelete();
@@ -22,18 +22,16 @@ return new class extends Migration {
                 ->constrained('exercises')
                 ->cascadeOnDelete();
 
-            // تفاصيل التمرين داخل البرنامج
             $table->integer('sets')->default(3);
             $table->integer('reps')->default(10);
             $table->integer('rest_seconds')->nullable();
 
-            // تنظيم الجدول
-            $table->integer('day_number');      // اليوم (Day 1, Day 2...)
-            $table->integer('order_in_day');    // ترتيب التمرين داخل اليوم
+            $table->integer('day_number');     
+            $table->integer('order_in_day');   
 
             $table->timestamps();
 
-            // منع التكرار
+         
             $table->unique(
                 ['program_version_id', 'exercise_id', 'day_number', 'order_in_day'],
                 'prog_ex_unique'

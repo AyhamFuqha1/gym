@@ -13,6 +13,7 @@ return new class extends Migration {
         Schema::create('exercises', function (Blueprint $table) {
             $table->id();
             $table->foreignId('general_exercise_id')->constrained()->cascadeOnDelete();
+            $table->string('name');
             $table->string('difficulty_level');
             $table->string('video_url')->nullable();
             $table->string('instructions')->nullable();

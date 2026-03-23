@@ -46,17 +46,22 @@ class MembersController extends Controller
         }
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(members $members)
+  
+    public function show($id)
     {
-        //
+         try {
+          $res=$this->memberService->show($id);
+          return response()->json($res,201);
+        } catch (Throwable $e) {
+            return response()->json([
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString(),
+            ], 500);
+        }
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
     public function update(Request $request, members $members)
     {
         //

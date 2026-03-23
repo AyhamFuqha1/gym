@@ -11,7 +11,7 @@ class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable;
-     use HasApiTokens, Notifiable;
+    use HasApiTokens, Notifiable;
     /**
      * The attributes that are mass assignable.
      *
@@ -45,5 +45,26 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
-    
+    public function injuries()
+    {
+        return $this->hasMany(UserInjuries::class, 'user_id');
+    }
+      public function feedback()
+    {
+        return $this->hasOne(feedback::class, 'user_id');
+    }
+    public function Paln()
+    {
+        return $this->hasOne(Plan::class, 'user_id');
+    }
+      public function subscription()
+    {
+        return $this->hasOne(Subscription::class, 'user_id');
+    }
+      public function plan()
+    {
+        return $this->hasOne(Plan::class, 'user_id');
+    }
+
+
 }
