@@ -20,6 +20,7 @@ return new class extends Migration {
             $table->foreignId('plan_id')
                 ->constrained()
                 ->cascadeOnDelete();
+            $table->decimal("discount",10,2);
             $table->date('start_date');
             $table->date('end_date');
             $table->enum('status', ['active', 'expired', 'cancelled'])

@@ -16,6 +16,8 @@ return new class extends Migration {
             $table->string('injury_type');
             $table->string('severity');
             $table->text('notes')->nullable();
+            $table->text('status')->enum("active","recovered");
+            $table->timestamp('created_at')->useCurrent();
         });
     }
 

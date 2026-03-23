@@ -18,7 +18,7 @@ class ProgramExercises extends Model
         'order_in_day'
     ];
 
-    // العلاقة عكسية مع Exercise
+    
     public function exercise()
     {
         return $this->belongsTo(Exercises::class, 'exercise_id', 'id');

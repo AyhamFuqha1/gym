@@ -15,7 +15,6 @@ return new class extends Migration {
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             $table->string('type');
             $table->text('content');
-            $table->integer('rating')->nullable();
             $table->timestamp('created_at')->useCurrent();
         });
     }

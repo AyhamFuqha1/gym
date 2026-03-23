@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Exercises extends Model
 {
-     protected $table = 'exercises';
+    protected $table = 'exercises';
 
     protected $fillable = [
         'name',
@@ -17,13 +17,22 @@ class Exercises extends Model
         'common_mistakes'
     ];
 
-   
+
     public function category()
     {
         return $this->belongsTo(GeneralExercises::class, 'general_exercise_id');
     }
-     public function programs()
+    public function programs()
     {
         return $this->hasMany(ProgramExercises::class, 'exercise_id', 'id');
+    }
+    public function oldAdjustments()
+    {
+        return $this->hasMany(InjuryProgramAdjustments::class, 'old_exercise_id');
+    }
+
+    public function newAdjustments()
+    {
+        return $this->hasMany(InjuryProgramAdjustments::class, 'new_exercise_id');
     }
 }
