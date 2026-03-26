@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreGeneralNutritionRequest;
 use App\Http\Requests\UpdateGeneralNutritionRequest;
 use App\Models\GeneralNutrition;
+use App\Models\Food;
+use App\Http\Resources\GeneralNutritionResource;
 use App\Services\GeneralNutritionService;
 use Illuminate\Http\Request;
 use Throwable;
@@ -21,8 +23,8 @@ class GeneralNutritionController extends Controller
     public function index()
     {
         try {
-            $res = $this->generalNutritionService->index();
-            return response()->json($res, 200);
+            $categories = $this->generalNutritionService->index();
+            return GeneralNutritionResource::collection($categories);
         } catch (Throwable $e) {
             return response()->json([
                 'message' => $e->getMessage(),
@@ -37,8 +39,8 @@ class GeneralNutritionController extends Controller
     {
         try {
             $data = $request->validated();
-            $res = $this->generalNutritionService->store($data);
-            return response()->json($res, 201);
+            $category = $this->generalNutritionService->store($data);
+            return new GeneralNutritionResource($category);
         } catch (Throwable $e) {
             return response()->json([
                 'message' => $e->getMessage(),
@@ -52,8 +54,8 @@ class GeneralNutritionController extends Controller
     public function show($id)
     {
         try {
-            $res = $this->generalNutritionService->show($id);
-            return response()->json($res, 200);
+            $category = $this->generalNutritionService->show($id)->load('foods');
+            return new GeneralNutritionResource($category);
         } catch (Throwable $e) {
             return response()->json([
                 'message' => $e->getMessage(),
@@ -68,8 +70,8 @@ class GeneralNutritionController extends Controller
     {
         try {
             $data = $request->validated();
-            $res = $this->generalNutritionService->update($id, $data);
-            return response()->json($res, 200);
+            $category = $this->generalNutritionService->update($id, $data);
+            return new GeneralNutritionResource($category);
         } catch (Throwable $e) {
             return response()->json([
                 'message' => $e->getMessage(),

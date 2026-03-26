@@ -16,8 +16,8 @@ class GeneralNutrition extends Model
 
     public $timestamps = true;
 
-    public function nutritions()
+    public function foods()
     {
-        return $this->hasMany(Nutrition::class, 'general_nutrition_id');
+        return $this->hasMany(Food::class, 'general_nutrition_id');
     }
 }

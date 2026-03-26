@@ -3,13 +3,13 @@
 namespace App\Services;
 
 use App\Models\GeneralNutrition;
-use App\Models\Nutrition;  // Assuming Nutrition model exists based on migration pattern
+
 
 class GeneralNutritionService
 {
     public function index()
     {
-        return GeneralNutrition::all();
+        return GeneralNutrition::with('foods')->get();
     }
 
     public function store($data)
@@ -33,10 +33,10 @@ class GeneralNutritionService
     {
         $category = GeneralNutrition::findOrFail($id);
 
-        if ($category->nutritions()->exists()) {
+        if ($category->foods()->exists()) {
             return [
                 "status" => "failed",
-                "message" => "Cannot delete category. It has related nutritions."
+                "message" => "Cannot delete category. It has related foods."
             ];
         }
 

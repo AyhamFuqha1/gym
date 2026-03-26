@@ -74,8 +74,9 @@ Route::get('/plans/{id}', [PlanController::class, 'show']);
 Route::put('/plans/{id}', [PlanController::class, 'update']);
 Route::delete('/plans/{id}', [PlanController::class, 'destroy']);
 
-// General Nutrition CRUD
+// Nutrition APIs
 use App\Http\Controllers\GeneralNutritionController;
+use App\Http\Controllers\FoodController;
 
 Route::middleware(['auth:sanctum', 'check.sub'])->group(function () {
     Route::get('/generalNutrition', [GeneralNutritionController::class, 'index']);
@@ -84,4 +85,7 @@ Route::post('/generalNutrition', [GeneralNutritionController::class, 'store']);
 Route::get('/generalNutrition/{id}', [GeneralNutritionController::class, 'show']);
 Route::post('/generalNutrition/{id}', [GeneralNutritionController::class, 'update']);
 Route::delete('/generalNutrition/{id}', [GeneralNutritionController::class, 'destroy']);
-//
+
+// Food CRUD APIs
+Route::apiResource('foods', FoodController::class);
+Route::get('/general-nutrition', [GeneralNutritionController::class, 'index']);  // Public endpoint with foods
