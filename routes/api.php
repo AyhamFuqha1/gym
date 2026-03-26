@@ -73,4 +73,15 @@ Route::post('/plans', [PlanController::class, 'store']);
 Route::get('/plans/{id}', [PlanController::class, 'show']);
 Route::put('/plans/{id}', [PlanController::class, 'update']);
 Route::delete('/plans/{id}', [PlanController::class, 'destroy']);
+
+// General Nutrition CRUD
+use App\Http\Controllers\GeneralNutritionController;
+
+Route::middleware(['auth:sanctum', 'check.sub'])->group(function () {
+    Route::get('/generalNutrition', [GeneralNutritionController::class, 'index']);
+});
+Route::post('/generalNutrition', [GeneralNutritionController::class, 'store']);
+Route::get('/generalNutrition/{id}', [GeneralNutritionController::class, 'show']);
+Route::post('/generalNutrition/{id}', [GeneralNutritionController::class, 'update']);
+Route::delete('/generalNutrition/{id}', [GeneralNutritionController::class, 'destroy']);
 //
