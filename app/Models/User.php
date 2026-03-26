@@ -17,6 +17,7 @@ class User extends Authenticatable
      *
      * @var list<string>
      */
+    public $timestamps = false;
     protected $fillable = [
         'name',
         'email',
@@ -59,7 +60,7 @@ class User extends Authenticatable
     }
       public function subscription()
     {
-        return $this->hasOne(Subscription::class, 'user_id');
+        return $this->hasMany(Subscription::class, 'user_id');
     }
       public function plan()
     {

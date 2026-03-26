@@ -9,9 +9,9 @@ use Throwable;
 
 class GeneralExercisesController extends Controller
 {
-    private GeneralExercisesService $generalExercisesService;
+    public GeneralExercisesService $generalExercisesService;
 
-    private function __construct(GeneralExercisesService $generalExercisesService)
+    public function __construct(GeneralExercisesService $generalExercisesService)
     {
         $this->generalExercisesService = $generalExercisesService;
     }
