@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Exercises;
+use App\Models\GeneralExercises;
 
 class ExercisesService
 {
@@ -18,6 +19,20 @@ class ExercisesService
     public function show($id)
     {
         return Exercises::findOrFail($id);
+    }
+
+    public function getByGeneralExerciseId($id)
+    {
+        $generalExercise = GeneralExercises::findOrFail($id);
+
+        $exercises = Exercises::where('general_exercise_id', $id)->get();
+
+        return [
+            'success' => true,
+            'message' => 'Exercises fetched successfully',
+            'generalExercise' => $generalExercise,
+            'exercises' => $exercises,
+        ];
     }
 
 

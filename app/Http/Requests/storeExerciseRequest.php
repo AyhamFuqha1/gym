@@ -24,7 +24,7 @@ class storeExerciseRequest extends FormRequest
         return [
             'name' => 'required|string|max:255',
             'general_exercise_id' => 'required|integer|exists:general_exercises,id',
-            'difficulty_level' => 'required|in:easy,medium,hard',
+            'difficulty_level' => 'required|in:beginner,intermediate,advanced',
             'video_url' => 'nullable|url',
             'instructions' => 'required|string',
             'common_mistakes' => 'nullable|string',

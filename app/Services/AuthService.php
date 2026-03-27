@@ -40,7 +40,7 @@ class AuthService
         return DB::transaction(function () use ($data, $admin) {
             //$tempPassword = random_int(10000000, 99999999);
             $tempPassword = 123456;
-            $userId = DB::table('users')->insertGetId(['name' => $data->name, 'email' => $data->email, 'password' => Hash::make($tempPassword), 'role_id' => $data->role_id]);
+            $userId = DB::table('users')->insertGetId(['name' => $data->name, 'email' => $data->email, 'password' => Hash::make($tempPassword), 'role_id' => $data->role_id,'fingerprint' => $data->fingerprint ?? null]);
             //  SsendRegisterEmailJob::dispatch($data->email, $data->name, $tempPassword);
             return true;
         });

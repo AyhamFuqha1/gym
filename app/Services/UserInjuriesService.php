@@ -12,7 +12,7 @@ class UserInjuriesService
 
     public function index()
     {
-
+        return UserInjuries::all();
     }
 
 
@@ -38,7 +38,7 @@ class UserInjuriesService
     public function destroy($id)
     {
         $Injuries = UserInjuries::findOrFail($id);
-        return $Injuries->deleted($id);
+        return $Injuries->delete();
     }
 
     public function dashboard()

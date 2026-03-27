@@ -33,11 +33,20 @@ class MembersController extends Controller
     }
     public function store(Request $request)
     {
-        try {
-          $res=$this->memberService->store($request);
-          return response()->json($res,201);
-        } catch (Throwable $e) {
-            return response()->json([
+            try {
+                $data = $request->validate([
+                    'name' => 'required|string|min:3|max:255',
+                    'email' => 'required|email|unique:users,email',
+                    'role_id' => 'required|integer|exists:roles,id',
+                ]);
+
+                $admin = $request->user() ?? (object)['id' => 1];
+
+                $res = $this->memberService->store((object) $data, $admin);
+
+                return response()->json($res, 201);
+            } catch (Throwable $e) {
+                return response()->json([
                 'message' => $e->getMessage(),
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),
@@ -51,7 +60,7 @@ class MembersController extends Controller
     {
          try {
           $res=$this->memberService->show($id);
-          return response()->json($res,201);
+          return response()->json($res,200);
         } catch (Throwable $e) {
             return response()->json([
                 'message' => $e->getMessage(),

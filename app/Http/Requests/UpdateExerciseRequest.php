@@ -22,12 +22,12 @@ class UpdateExerciseRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => 'string|max:255',
-            'general_exercise_id' => 'integer|exists:general_exercises,id',
-            'difficulty_level' => 'in:easy,medium,hard',
-            'video_url' => 'url',
-            'instructions' => 'string',
-            'common_mistakes' => 'string',
+            'name' => 'sometimes|string|max:255',
+            'general_exercise_id' => 'sometimes|integer|exists:general_exercises,id',
+            'difficulty_level' => 'sometimes|in:beginner,intermediate,advanced',
+            'video_url' => 'sometimes|nullable|url',
+            'instructions' => 'sometimes|string',
+            'common_mistakes' => 'sometimes|nullable|string',
         ];
     }
 }

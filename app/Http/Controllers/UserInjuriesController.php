@@ -19,12 +19,17 @@ class UserInjuriesController extends Controller
 
     public function index()
     {
-        $this->userInjuriesService->index();
+        $res = $this->userInjuriesService->index();
+
+        return response()->json([
+            'success' => true,
+            'data' => $res
+        ], 200);
     }
 
     public function store(Request $request)
     {
-        $res = $this->userInjuriesService->store($request);
+        $res = $this->userInjuriesService->store($request->all());
 
         return response()->json([
             'success' => true,
@@ -50,9 +55,9 @@ class UserInjuriesController extends Controller
 
     }
 
-    public function update($id, $data)
+    public function update(Request $request, $id)
     {
-        $Injuries = $this->userInjuriesService->update($id, $data);
+        $Injuries = $this->userInjuriesService->update($id, $request->all());
         if (!$Injuries) {
             return response()->json([
                 'success' => false,

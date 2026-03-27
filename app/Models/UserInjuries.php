@@ -5,6 +5,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class UserInjuries extends Model
 {
+    public $timestamps = false;
     protected $table = 'user_injuries';
 
     protected $fillable = [

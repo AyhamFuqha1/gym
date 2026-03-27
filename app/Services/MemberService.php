@@ -11,8 +11,8 @@ class MemberService
 {
     public function index()
     {
-
         $query = DB::table("users")
+            ->where("users.role_id", 4)
             ->leftJoin("subscriptions", function ($join) {
                 $join->on("users.id", "=", "subscriptions.user_id")
                     ->whereRaw('subscriptions.id IN (SELECT MAX(id) FROM subscriptions GROUP BY user_id)');
@@ -27,19 +27,16 @@ class MemberService
             "subscriptions.end_date"
         )->get();
 
-
         $stats = [
             'total' => $members->count(),
             'active' => $members->where('status', 'active')->count(),
             'not_active' => $members->where('status', '!=', 'active')->count(),
-
         ];
 
-
-        return response()->json([
+        return [
             'stats' => $stats,
             'members' => $members
-        ]);
+        ];
     }
     public function store($data, $admin)
     {
@@ -53,7 +50,7 @@ class MemberService
 
     public function show($id)
     {
-        $member = User::where('role_id', 1)->where('id', $id)->with('subscription')->get();
+        $member = User::where('role_id', 4)->where('id', $id)->with('subscription')->get();
         return $member;
     }
 

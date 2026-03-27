@@ -31,26 +31,28 @@ Route::put('/profile/{id}', [ProfileController::class, 'update']);
 Route::delete('/profile/{id}', [ProfileController::class, 'destroy']);
 /*-----*/
 Route::get('/members',[MembersController::class,'index']);
-Route::get('/members',[MembersController::class,'store']);
+Route::post('/members',[MembersController::class,'store']);
 Route::get('/members/{id}',[MembersController::class,'show']);
 //Route::get('/members',[MembersController::class,'store']);
 //**--------------------- */
 Route::get('/generalExercise',[GeneralExercisesController::class,'index']);
 Route::post('/generalExercise',[GeneralExercisesController::class,'store']);
 Route::get('/generalExercise/{id}',[GeneralExercisesController::class,'show']);
-Route::post('/generalExercise/{id}',[GeneralExercisesController::class,'update']);
+Route::get('/generalExercise/{id}/exercises', [ExercisesController::class, 'getByGeneralExerciseId']);
+Route::put('/generalExercise/{id}', [GeneralExercisesController::class, 'update']);
 Route::delete('/generalExercise/{id}',[GeneralExercisesController::class,'destroy']);
 //**---------------------------- */
+Route::post('/exercises', [ExercisesController::class, 'store']);
 Route::get('/exercises/{id}',[ExercisesController::class,'show']);
 Route::put('/exercises/{id}',[ExercisesController::class,'update']);
 Route::delete('/exercises/{id}',[ExercisesController::class,'destroy']);
 //**---------------------------- */
 Route::get('/userInjuries',[UserInjuriesController::class,'index']);
 Route::post('/userInjuries',[UserInjuriesController::class,'store']);
+Route::get('/userInjuries/dashboard',[UserInjuriesController::class,'dashboard']);
 Route::get('/userInjuries/{id}',[UserInjuriesController::class,'show']);
 Route::put('/userInjuries/{id}',[UserInjuriesController::class,'update']);
 Route::delete('/userInjuries/{id}',[UserInjuriesController::class,'destroy']);
-Route::get('/userInjuries/dashboard',[UserInjuriesController::class,'dashboard']);
 /**----------------------------- */
 Route::get('/feedback/dashboard',[FeedbackController::class,'dashboard']);
 
