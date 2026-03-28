@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Jobs\sendRegisterEmailJob;
+use App\Models\Food;
 use App\Models\Plan;
 use App\Models\Subscription;
 use App\Models\User;
@@ -55,46 +56,46 @@ class MemberService
     }
 
     public function show($id)
-{
-   
-    $user = User::where('role_id', 1)
-                ->with(['subscription.plan']) 
-                ->findOrFail($id);
+    {
 
-    return [
-        "member" => [
-            "id"           => $user->id,
-            "name"         => $user->name,
-            "email"        => $user->email,
-            "phone"        => $user->number_phone,
-            "status"       => $user->status,    
-            "is_frozen"    => (bool) $user->is_frozen,
-            "joined_at"    => $user->created_at->format('Y-m-d'),
-            "remaining_days" => $user->number_day, 
-        ],
+        $user = User::where('role_id', 1)
+            ->with(['subscription.plan'])
+            ->findOrFail($id);
 
-   
-        "subscriptions" => $user->subscription->map(function ($sub) {
-            return [
-                "id"         => $sub->id,
-                "plan_name"  => $sub->plan->name ?? 'N/A',
-                "price"      => $sub->plan->price ?? 0,
-                "discount"   => $sub->discount ?? 0,
-                "start_date" => $sub->start_date,
-                "end_date"   => $sub->end_date,
-                "status"     => $sub->status,
-                "created_at" => $sub->created_at->format('Y-m-d'),
-            ];
-        }),
+        return [
+            "member" => [
+                "id" => $user->id,
+                "name" => $user->name,
+                "email" => $user->email,
+                "phone" => $user->number_phone,
+                "status" => $user->status,
+                "is_frozen" => (bool) $user->is_frozen,
+                "joined_at" => $user->created_at->format('Y-m-d'),
+                "remaining_days" => $user->number_day,
+            ],
 
-      
-        "payment_summary" => [
-            "total_paid" => $user->subscription->sum(function ($sub) {
-                return ($sub->plan->price ?? 0) - ($sub->discount ?? 0);
+
+            "subscriptions" => $user->subscription->map(function ($sub) {
+                return [
+                    "id" => $sub->id,
+                    "plan_name" => $sub->plan->name ?? 'N/A',
+                    "price" => $sub->plan->price ?? 0,
+                    "discount" => $sub->discount ?? 0,
+                    "start_date" => $sub->start_date,
+                    "end_date" => $sub->end_date,
+                    "status" => $sub->status,
+                    "created_at" => $sub->created_at->format('Y-m-d'),
+                ];
             }),
-        ],
-    ];
-}
+
+
+            "payment_summary" => [
+                "total_paid" => $user->subscription->sum(function ($sub) {
+                    return ($sub->plan->price ?? 0) - ($sub->discount ?? 0);
+                }),
+            ],
+        ];
+    }
     public function reNewSubscription($data, $user_id)
     {
         $plan = Plan::where('id', $data->plan_id)->first();
@@ -108,18 +109,42 @@ class MemberService
             'end_date' => $endDate,
             'status' => "active"
         ];
-        
-         Subscription::create($Sub);
-         $number_day=$plan->duration_days;
-         User::where("id",$user_id)->increment("number_day",$number_day);
-         return $Sub;
+
+        Subscription::create($Sub);
+        $number_day = $plan->duration_days;
+        User::where("id", $user_id)->increment("number_day", $number_day);
+        return $Sub;
     }
 
-    public function freezeSubscription($id){
+    public function overview($id)
+    {
+        $user = User::with(['Profile', 'goals'])->where('id', $id)->first();
+        $overView = [
+            'name' => $user->name,
+            'email' => $user->email,
+            'gender' => $user->profile->gender,
+            'age' => $user->profile->age,
+            'height' => $user->profile->height,
+            'weight' => $user->profile->weight,
+            'goal_type' => $user->goals->goal_type,
+            'target_weight' => $user->goals->target_weight
+        ];
+        return $overView;
+    }
+
+    public function nutrition($id)
+    {
+        $user = User::with('likedFoods:name', 'dislikedFoods:name', 'UserNutritionPlanِActive.nutritionVersions.nutritions')->where("id", $id)->get();//liked_foods->name
+        $foodsAvailable = Food::whereDoesntHave('users', function ($q) use ($id) {
+            $q->where('user_id', $id)
+                ->where('type', 'dislike');
+        })->get();//name
+      
+        return [
+            $user,$foodsAvailable
+        ];
 
     }
-    
-    public function resumeSubscription($id){
 
-    }
+
 }

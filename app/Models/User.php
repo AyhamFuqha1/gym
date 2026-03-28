@@ -50,7 +50,7 @@ class User extends Authenticatable
     {
         return $this->hasMany(UserInjuries::class, 'user_id');
     }
-      public function feedback()
+    public function feedback()
     {
         return $this->hasOne(feedback::class, 'user_id');
     }
@@ -58,13 +58,41 @@ class User extends Authenticatable
     {
         return $this->hasOne(Plan::class, 'user_id');
     }
-      public function subscription()
+    public function subscription()
     {
         return $this->hasMany(Subscription::class, 'user_id');
     }
-      public function plan()
+    public function plan()
     {
         return $this->hasOne(Plan::class, 'user_id');
+    }
+    public function Profile()
+    {
+        return $this->hasOne(UserProfiles::class, 'user_id');
+    }
+
+    public function goals()
+    {
+        return $this->hasOne(UserGoal::class, 'user_id');
+    }
+    public function likedFoods()
+    {
+        return $this->belongsToMany(Food::class)
+            ->withPivot('type')
+            ->wherePivot('type','=', 'like');
+    }
+
+    public function dislikedFoods()
+    {
+        return $this->belongsToMany(Food::class)
+            ->withPivot('type')
+            ->wherePivot('type','=', 'dislike');
+    }
+    public function UserNutritionPlan(){
+        return $this->hasMany(UserNutritionPlans::class,'user_id');
+    }
+    public function UserNutritionPlanِActive(){
+        return $this->hasMany(UserNutritionPlans::class,'user_id')->where('active',1);
     }
 
 

@@ -80,11 +80,42 @@ class MembersController extends Controller
         }
     }
 
-    public function freezeSubscription($id){
-         return User::where("id",$id)->update(["status"=>"frozen"]);
+    public function freezeSubscription($id)
+    {
+        return User::where("id", $id)->update(["status" => "frozen"]);
     }
-    public function resumeSubscription($id){
-         return User::where("id",$id)->update(["status"=>"cancel"]);
+    public function resumeSubscription($id)
+    {
+        return User::where("id", $id)->update(["status" => "cancel"]);
+    }
+
+    public function overview($id)
+    {
+        try {
+            $res = $this->memberService->overview($id);
+            return response()->json($res, 200);
+        } catch (Throwable $e) {
+            return response()->json([
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString(),
+            ], 500);
+        }
+    }
+
+    public function nutrition($id){
+         try {
+            $res = $this->memberService->nutrition($id);
+            return response()->json($res, 201);
+        } catch (Throwable $e) {
+            return response()->json([
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString(),
+            ], 500);
+        }
     }
 
 }

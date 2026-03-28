@@ -89,3 +89,17 @@ Route::delete('/generalNutrition/{id}', [GeneralNutritionController::class, 'des
 // Food CRUD APIs
 Route::apiResource('foods', FoodController::class);
 Route::get('/general-nutrition', [GeneralNutritionController::class, 'index']);  // Public endpoint with foods
+
+//
+Route::get('/members/overView/{id}', [MembersController::class, 'overView']);
+Route::get('/members/nutrition/{id}', [MembersController::class, 'nutrition']);
+
+// User Goals CRUD
+use App\Http\Controllers\UserGoalController;
+
+Route::middleware('auth:sanctum')->apiResource('user-goals', UserGoalController::class);
+
+
+
+
+

@@ -4,7 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class Food extends Model
+class Nutrition extends Model
 {
     protected $table = 'foods';
 
@@ -15,26 +15,22 @@ class Food extends Model
         'protein',
         'carbs',
         'fat',
-        'badge',
-        'image',
-        'serving_size',
-    ];
-
-    protected $casts = [
-        'calories' => 'decimal:2',
-        'protein' => 'decimal:2',
-        'carbs' => 'decimal:2',
-        'fat' => 'decimal:2',
     ];
 
     public function generalNutrition()
     {
         return $this->belongsTo(GeneralNutrition::class, 'general_nutrition_id');
     }
-    public function users()
+
+    public function nutritionVersions()
     {
-        return $this->belongsToMany(User::class)
-            ->withPivot('type')
+        return $this->belongsToMany(
+            NutritionVersions::class,
+            'nutrition_food_items',
+            'nutrition_version_id',
+            'nutrition_id'
+        )
+            ->withPivot('quantity', 'meal_type')
             ->withTimestamps();
     }
 }
