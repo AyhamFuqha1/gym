@@ -140,7 +140,7 @@ class MemberService
         $user = User::with([
             'likedFoods:id,name',
             'dislikedFoods:id,name',
-            'UserNutritionPlanِActive.nutritionVersions.nutritions'
+            'UserNutritionPlanActive.nutritionVersions.nutritions'
         ])->where('id', $id)->firstOrFail();
 
         $foodsAvailable = Food::whereDoesntHave('users', function ($q) use ($id) {

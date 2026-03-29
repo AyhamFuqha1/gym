@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class UserGoal extends Model
 {
+    public $timestamps = false;
     protected $table = 'user_goals';
 
     protected $fillable = [

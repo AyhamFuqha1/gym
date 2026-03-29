@@ -87,14 +87,14 @@ class User extends Authenticatable
     {
         return $this->belongsToMany(Food::class, 'food_user', 'user_id', 'food_id')
             ->withPivot('type')
-            ->wherePivot('type', 'like');
+            ->wherePivot('type', '=','like');
     }
 
     public function dislikedFoods()
     {
         return $this->belongsToMany(Food::class, 'food_user', 'user_id', 'food_id')
             ->withPivot('type')
-            ->wherePivot('type', 'dislike');
+            ->wherePivot('type', '=','dislike');
     }
 
     public function UserNutritionPlan()
