@@ -14,6 +14,10 @@ use App\Models\UserInjuries;
 use App\Services\FeedbackService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\DashBoardController;
+use App\Http\Controllers\PlanController;
+use App\Http\Controllers\GeneralNutritionController;
+use App\Http\Controllers\FoodController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -61,3 +65,25 @@ Route::get('/news', [NewsController::class, 'index']);
 Route::get('/news/stats', [NewsController::class, 'stats']);
 Route::post('/news', [NewsController::class, 'store']);
 Route::delete('/news/{id}', [NewsController::class, 'destroy']);
+// Plans
+Route::get('/plans', [PlanController::class, 'index']);
+Route::post('/plans', [PlanController::class, 'store']);
+Route::get('/plans/{id}', [PlanController::class, 'show']);
+Route::put('/plans/{id}', [PlanController::class, 'update']);
+Route::delete('/plans/{id}', [PlanController::class, 'destroy']);
+
+// General Nutrition
+Route::middleware(['auth:sanctum', 'check.sub'])->group(function () {
+    Route::get('/generalNutrition', [GeneralNutritionController::class, 'index']);
+});
+Route::post('/generalNutrition', [GeneralNutritionController::class, 'store']);
+Route::get('/generalNutrition/{id}', [GeneralNutritionController::class, 'show']);
+Route::put('/generalNutrition/{id}', [GeneralNutritionController::class, 'update']);
+Route::delete('/generalNutrition/{id}', [GeneralNutritionController::class, 'destroy']);
+
+// Foods
+Route::apiResource('foods', FoodController::class);
+Route::get('/general-nutrition', [GeneralNutritionController::class, 'index']);
+
+// Dashboard
+Route::middleware('auth:sanctum')->get('/dashboard', [DashBoardController::class, 'dashboard']);
