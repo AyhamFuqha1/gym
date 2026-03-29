@@ -18,8 +18,8 @@ return new class extends Migration
 
 
             $table->foreignId('nutrition_id')
-                  ->constrained('nutrition')
-                  ->onDelete('cascade');
+                ->constrained('foods')
+                ->onDelete('cascade');
 
 
             $table->string('quantity')->nullable(); 
