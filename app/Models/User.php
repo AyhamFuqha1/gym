@@ -7,11 +7,13 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable;
     use HasApiTokens, Notifiable;
+
     /**
      * The attributes that are mass assignable.
      *
@@ -45,26 +47,63 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+
     public function injuries()
     {
         return $this->hasMany(UserInjuries::class, 'user_id');
     }
-      public function feedback()
+
+    public function feedback()
     {
         return $this->hasOne(feedback::class, 'user_id');
     }
+
     public function Paln()
     {
         return $this->hasOne(Plan::class, 'user_id');
     }
-      public function subscription()
+
+    public function subscription()
     {
         return $this->hasOne(Subscription::class, 'user_id');
     }
-      public function plan()
+
+    public function plan()
     {
         return $this->hasOne(Plan::class, 'user_id');
     }
 
+    public function Profile()
+    {
+        return $this->hasOne(UserProfiles::class, 'user_id');
+    }
 
+    public function goals()
+    {
+        return $this->hasOne(UserGoal::class, 'user_id');
+    }
+
+    public function likedFoods()
+    {
+        return $this->belongsToMany(Food::class, 'food_user', 'user_id', 'food_id')
+            ->withPivot('type')
+            ->wherePivot('type', 'like');
+    }
+
+    public function dislikedFoods()
+    {
+        return $this->belongsToMany(Food::class, 'food_user', 'user_id', 'food_id')
+            ->withPivot('type')
+            ->wherePivot('type', 'dislike');
+    }
+
+    public function UserNutritionPlan()
+    {
+        return $this->hasMany(UserNutritionPlans::class, 'user_id');
+    }
+
+    public function UserNutritionPlanActive()
+    {
+        return $this->hasMany(UserNutritionPlans::class, 'user_id')->where('active', 1);
+    }
 }

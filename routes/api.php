@@ -18,6 +18,7 @@ use App\Http\Controllers\DashBoardController;
 use App\Http\Controllers\PlanController;
 use App\Http\Controllers\GeneralNutritionController;
 use App\Http\Controllers\FoodController;
+use App\Http\Controllers\UserGoalController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -95,3 +96,4 @@ Route::get('/general-nutrition', [GeneralNutritionController::class, 'index']);
 
 // Dashboard
 Route::middleware('auth:sanctum')->get('/dashboard', [DashBoardController::class, 'dashboard']);
+Route::middleware('auth:sanctum')->apiResource('user-goals', UserGoalController::class);
