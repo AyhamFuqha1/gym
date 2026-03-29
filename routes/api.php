@@ -37,6 +37,14 @@ Route::delete('/profile/{id}', [ProfileController::class, 'destroy']);
 Route::get('/members',[MembersController::class,'index']);
 Route::post('/members',[MembersController::class,'store']);
 Route::get('/members/{id}',[MembersController::class,'show']);
+Route::middleware('auth:sanctum')->group(function () {
+    Route::post('/members/ReNewSubscription', [MembersController::class, 'reNewSubscription']);
+    Route::post('/members/subscription/freeze/{id}', [MembersController::class, 'freezeSubscription']);
+    Route::post('/members/subscription/resume/{id}', [MembersController::class, 'resumeSubscription']);
+});
+
+Route::get('/members/overView/{id}', [MembersController::class, 'overview']);
+Route::get('/members/nutrition/{id}', [MembersController::class, 'nutrition']);
 //Route::get('/members',[MembersController::class,'store']);
 //**--------------------- */
 Route::get('/generalExercise',[GeneralExercisesController::class,'index']);
