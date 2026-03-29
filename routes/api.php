@@ -3,6 +3,7 @@
 
 
 use App\Http\Controllers\api\AuthController;
+use App\Http\Controllers\DashBoardController;
 use App\Http\Controllers\ExercisesController;
 use App\Http\Controllers\FeedbackController;
 use App\Http\Controllers\GeneralExercisesController;
@@ -98,7 +99,7 @@ Route::get('/members/nutrition/{id}', [MembersController::class, 'nutrition']);
 use App\Http\Controllers\UserGoalController;
 
 Route::middleware('auth:sanctum')->apiResource('user-goals', UserGoalController::class);
-
+Route::middleware('auth:sanctum')->get('/dashboard', [DashBoardController::class, 'dashboard']);
 
 
 
