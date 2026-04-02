@@ -25,7 +25,7 @@ Route::get('/user', function (Request $request) {
 })->middleware('auth:sanctum');
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register'])->middleware('auth:sanctum');//////////
-Route::post('/logout', [AuthController::class, 'logout']);
+Route::middleware('auth:sanctum')->post('/logout', [AuthController::class, 'logout']);
 Route::post('/verify-otp', [AuthController::class, 'verifyOTP']);
 Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
 Route::post('/reset-password', [AuthController::class, 'restetPassword']);
@@ -36,9 +36,10 @@ Route::put('/profile/{id}', [ProfileController::class, 'update']);
 Route::delete('/profile/{id}', [ProfileController::class, 'destroy']);
 /*-----*/
 Route::get('/members',[MembersController::class,'index']);
-Route::post('/members',[MembersController::class,'store']);
 Route::get('/members/{id}',[MembersController::class,'show']);
 Route::middleware('auth:sanctum')->group(function () {
+    Route::post('/members',[MembersController::class,'store']);
+
     Route::post('/members/ReNewSubscription', [MembersController::class, 'reNewSubscription']);
     Route::post('/members/subscription/freeze/{id}', [MembersController::class, 'freezeSubscription']);
     Route::post('/members/subscription/resume/{id}', [MembersController::class, 'resumeSubscription']);
@@ -72,7 +73,10 @@ Route::get('/feedback/dashboard',[FeedbackController::class,'dashboard']);
 // News & Offers endpoints
 Route::get('/news', [NewsController::class, 'index']);
 Route::get('/news/stats', [NewsController::class, 'stats']);
+Route::get('/news/public', [NewsController::class, 'publicNews']);
+Route::get('/news/{id}', [NewsController::class, 'show']);
 Route::post('/news', [NewsController::class, 'store']);
+Route::put('/news/{id}', [NewsController::class, 'update']);
 Route::delete('/news/{id}', [NewsController::class, 'destroy']);
 // Plans
 Route::get('/plans', [PlanController::class, 'index']);

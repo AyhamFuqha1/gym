@@ -16,22 +16,26 @@ class AuthService
     {
         return DB::transaction(function () use ($data) {
             $user = User::where('email', $data->email)->first();
+
             if (!$user || !Hash::check($data->password, $user->password)) {
                 return [
                     "message" => "Email or password is incorrect",
-                    'status' => 401
-                ];
-            } else {
-
-                $token = $user->createToken('api-token')->plainTextToken;
-                $role = DB::table("roles")->where("id", $user->role_id)->first();
-                return [
-                    "message" => "Login successful",
-                    "status" => 200,
-                    "role" => $role->name,
-                    "token" => $token
+                    "status" => 401
                 ];
             }
+
+            $token = $user->createToken('api-token')->plainTextToken;
+            $role = DB::table("roles")->where("id", $user->role_id)->first();
+
+            return [
+                "message" => "Login successful",
+                "status" => 200,
+                "role" => $role->name,
+                "token" => $token,
+                "user_id" => $user->id,
+                "user_name" => $user->name,
+                "email" => $user->email
+            ];
         });
     }
 
@@ -93,9 +97,12 @@ class AuthService
 
     public function logout($user)
     {
-
         $user->currentAccessToken()->delete();
 
+        return [
+            'status' => 200,
+            'message' => 'Logout successful'
+        ];
     }
 
     /*public function forgotPassword($email)

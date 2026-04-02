@@ -41,9 +41,21 @@ class MembersController extends Controller
                 'role_id' => 'required|integer|exists:roles,id',
             ]);
 
-            $admin = $request->user() ?? (object)['id' => 1];
+            $authUser = $request->user();
 
-            $res = $this->memberService->store((object) $data, $admin);
+            if (!$authUser) {
+                return response()->json([
+                    'message' => 'Unauthorized'
+                ], 401);
+            }
+
+            if (!in_array($authUser->role_id, [1, 2])) {
+                return response()->json([
+                    'message' => 'Forbidden. Only admin or manager can create members.'
+                ], 403);
+            }
+
+            $res = $this->memberService->store((object) $data, $authUser);
 
             return response()->json($res, 201);
         } catch (Throwable $e) {
@@ -85,12 +97,13 @@ class MembersController extends Controller
 
             return response()->json($res, 200);
         } catch (Throwable $e) {
+            $statusCode = $e->getMessage() === 'This member already has an active subscription.'
+                ? 409
+                : 500;
+
             return response()->json([
                 'message' => $e->getMessage(),
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
-                'trace' => $e->getTraceAsString(),
-            ], 500);
+            ], $statusCode);
         }
     }
 

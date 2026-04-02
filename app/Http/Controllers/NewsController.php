@@ -85,8 +85,15 @@ class NewsController extends Controller
     public function update(Request $request, $id)
     {
         try {
-           
-            $updatedNews = $this->newsService->update($id, $request->all());
+            $validated = $request->validate([
+                'title' => 'sometimes|string|max:255',
+                'content' => 'sometimes|string',
+                'status' => 'sometimes|in:public,draft,deleted',
+                'published_at' => 'nullable|date',
+                'expires_at' => 'nullable|date',
+            ]);
+
+            $updatedNews = $this->newsService->update($id, $validated);
 
             return response()->json([
                 'status' => 'success',
@@ -105,5 +112,34 @@ class NewsController extends Controller
                 'message' => 'Failed to update: ' . $e->getMessage(),
             ], 500);
         }
+    }
+
+    public function show($id)
+    {
+        try {
+            $news = $this->newsService->show($id);
+
+            return response()->json([
+                'status' => 'success',
+                'data' => $news,
+            ], 200);
+
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'News not found',
+            ], 404);
+        }
+    }
+
+    public function publicNews(Request $request)
+    {
+        $perPage = (int) $request->query('per_page', 10);
+        $data = $this->newsService->getPublicNews($perPage);
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $data,
+        ]);
     }
 }

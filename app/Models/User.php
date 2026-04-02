@@ -65,7 +65,7 @@ class User extends Authenticatable
 
     public function subscription()
     {
-        return $this->hasOne(Subscription::class, 'user_id');
+        return $this->hasOne(Subscription::class, 'user_id')->latestOfMany();
     }
 
     public function plan()

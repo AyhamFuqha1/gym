@@ -28,19 +28,22 @@ class AuthController extends Controller
     {
         try {
             $login = $this->authService->login($request);
+
             if ($login['status'] !== 200) {
                 return response()->json(
                     ['message' => $login['message']],
                     $login['status']
                 );
-            } else {
-                return response()->json([
-                    'message' => $login['message'],
-                    'token' => $login['token'],
-                    'role' => $login['role']
-                ], 200);
-
             }
+
+            return response()->json([
+                'message' => $login['message'],
+                'token' => $login['token'],
+                'role' => $login['role'],
+                'user_id' => $login['user_id'],
+                'user_name' => $login['user_name'],
+                'email' => $login['email'],
+            ], 200);
         } catch (Throwable $e) {
             return response()->json([
                 'message' => $e->getMessage(),
@@ -86,13 +89,21 @@ class AuthController extends Controller
 
     public function logout(Request $request)
     {
-        //$user = $request->user();
-        $user = ["id" => 1];
         try {
-            $logout = $this->authService->logout($user);
-            if ($logout['status'] == 200) {
-                return response()->json($logout['message'], 200);
+            $user = $request->user();
+
+            if (!$user) {
+                return response()->json([
+                    'message' => 'Unauthorized'
+                ], 401);
             }
+
+            $logout = $this->authService->logout($user);
+
+            return response()->json([
+                'message' => $logout['message']
+            ], $logout['status']);
+
         } catch (Throwable $e) {
             return response()->json([
                 'message' => $e->getMessage(),
