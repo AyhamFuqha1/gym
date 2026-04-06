@@ -2,22 +2,32 @@
 
 
 
+use App\Http\Controllers\AIController;
 use App\Http\Controllers\api\AuthController;
 use App\Http\Controllers\DashBoardController;
 use App\Http\Controllers\ExercisesController;
 use App\Http\Controllers\FeedbackController;
 use App\Http\Controllers\GeneralExercisesController;
 use App\Http\Controllers\MembersController;
+use App\Http\Controllers\ModificationRequestController;
 use App\Http\Controllers\NewsController;
+use App\Http\Controllers\NutritionFoodItemsController;
+use App\Http\Controllers\NutritionVersionsController;
 use App\Http\Controllers\PlanController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ProgramVersionController;
+use App\Http\Controllers\SubscriptionController;
+use App\Http\Controllers\UserGoalController;
 use App\Http\Controllers\UserInjuriesController;
+use App\Http\Controllers\UserNutritionPlansController;
+use App\Http\Controllers\UserProgramController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
+
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/logout', [AuthController::class, 'logout']);
@@ -75,6 +85,7 @@ Route::get('/plans/{id}', [PlanController::class, 'show']);
 Route::put('/plans/{id}', [PlanController::class, 'update']);
 Route::delete('/plans/{id}', [PlanController::class, 'destroy']);
 
+
 // Nutrition APIs
 use App\Http\Controllers\GeneralNutritionController;
 use App\Http\Controllers\FoodController;
@@ -96,11 +107,44 @@ Route::get('/members/overView/{id}', [MembersController::class, 'overView']);
 Route::get('/members/nutrition/{id}', [MembersController::class, 'nutrition']);
 
 // User Goals CRUD
-use App\Http\Controllers\UserGoalController;
-
 Route::middleware('auth:sanctum')->apiResource('user-goals', UserGoalController::class);
 Route::middleware('auth:sanctum')->get('/dashboard', [DashBoardController::class, 'dashboard']);
+Route::post('/ai/generate', [AIController::class, 'generateProgram']);
 
+//
+Route::get('/subscriptionForAdmin', [SubscriptionController::class, 'show']);
 
+Route::post('/sync-all', [AIController::class, 'syncAll']);
+// 2. البحث عن تمارين
+Route::post('/search-exercises', [AIController::class, 'searchExercises']);
+// 3. البحث عن أكل
+Route::post('/search-foods', [AIController::class, 'searchFoods']);
+// 4. إنشاء جدول تمرين
+Route::post('/generate-training-plan', [AIController::class, 'generateTrainingPlan']);
+// 5. تعديل جدول تمرين
+Route::post('/modify-training-plan', [AIController::class, 'modifyTrainingPlan']);
 
+// User Programs CRUD
+Route::middleware('auth:sanctum')->apiResource('user-programs', UserProgramController::class);
+
+// Program Versions CRUD
+Route::middleware('auth:sanctum')->apiResource('program-versions', ProgramVersionController::class);
+
+// User Nutrition Plans CRUD
+Route::middleware('auth:sanctum')->apiResource('user-nutrition-plans', UserNutritionPlansController::class);
+
+// Nutrition Versions CRUD
+Route::middleware('auth:sanctum')->apiResource('nutrition-versions', NutritionVersionsController::class);
+
+// Nutrition Food Items CRUD
+Route::middleware('auth:sanctum')->apiResource('nutrition-food-items', NutritionFoodItemsController::class);
+// 6. إنشاء جدول أكل
+Route::post('/generate-nutrition-plan', [AIController::class, 'generateNutritionPlan']);
+// 7. تعديل جدول أكل
+Route::post('/modify-nutrition-plan', [AIController::class, 'modifyNutritionPlan']);
+// 8. تحليل التقدم
+Route::post('/analyze-progress', [AIController::class, 'analyzeProgress']);
+
+// Modification Requests CRUD
+Route::middleware('auth:sanctum')->apiResource('modification-requests', ModificationRequestController::class);
 

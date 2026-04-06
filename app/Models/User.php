@@ -50,6 +50,10 @@ class User extends Authenticatable
     {
         return $this->hasMany(UserInjuries::class, 'user_id');
     }
+    public function injuriesActive()
+    {
+        return $this->hasMany(UserInjuries::class, 'user_id')->where('status', 'active');
+    }
     public function feedback()
     {
         return $this->hasOne(feedback::class, 'user_id');
@@ -79,20 +83,22 @@ class User extends Authenticatable
     {
         return $this->belongsToMany(Food::class)
             ->withPivot('type')
-            ->wherePivot('type','=', 'like');
+            ->wherePivot('type', '=', 'like');
     }
 
     public function dislikedFoods()
     {
         return $this->belongsToMany(Food::class)
             ->withPivot('type')
-            ->wherePivot('type','=', 'dislike');
+            ->wherePivot('type', '=', 'dislike');
     }
-    public function UserNutritionPlan(){
-        return $this->hasMany(UserNutritionPlans::class,'user_id');
+    public function UserNutritionPlan()
+    {
+        return $this->hasMany(UserNutritionPlans::class, 'user_id');
     }
-    public function UserNutritionPlanِActive(){
-        return $this->hasMany(UserNutritionPlans::class,'user_id')->where('active',1);
+    public function UserNutritionPlanِActive()
+    {
+        return $this->hasMany(UserNutritionPlans::class, 'user_id')->where('active', 1);
     }
 
 

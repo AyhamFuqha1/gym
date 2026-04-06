@@ -14,7 +14,7 @@ class DashBoardServices
 {
     public function dashboard()
 {
-    // تخزين البيانات في الكاش لمدة 10 دقائق (600 ثانية)
+   
     return Cache::remember('admin_dashboard_stats', 600, function () {
         
         $now = Carbon::now();

@@ -14,7 +14,7 @@ class ProgramExercises extends Model
         'sets',
         'reps',
         'rest_seconds',
-        'day_number',
+        'difficulty',
         'order_in_day'
     ];
 

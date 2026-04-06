@@ -7,8 +7,10 @@ use Illuminate\Database\Eloquent\Model;
 class Subscription extends Model
 {
     protected $table = 'subscriptions';
+
     protected $fillable = [
-        'user_id',
+        'user_id',      // صاحب الاشتراك
+        'created_by',   // اللي أنشأ الاشتراك
         'plan_id',
         'discount',
         'start_date',
@@ -16,10 +18,20 @@ class Subscription extends Model
         'status',
     ];
 
+   
+
+   
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id');
     }
+
+
+    public function creator()
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
 
     public function plan()
     {

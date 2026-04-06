@@ -96,14 +96,15 @@ class MemberService
             ],
         ];
     }
-    public function reNewSubscription($data, $user_id)
+    public function reNewSubscription($data, $createdBy)
     {
         $plan = Plan::where('id', $data->plan_id)->first();
         $startDate = $data->start_date ? Carbon::parse($data->start_date) : now();
         $endDate = $startDate->copy()->addDays($plan->duration_days);
         $Sub = [
-            'user_id' => $user_id,
+            'user_id' => $createdBy,
             'plan_id' => $data->plan_id,
+            'created_by' => $data->user_id,
             'discount' => $data->discount,
             'start_date' => $startDate,
             'end_date' => $endDate,
@@ -112,7 +113,7 @@ class MemberService
 
         Subscription::create($Sub);
         $number_day = $plan->duration_days;
-        User::where("id", $user_id)->increment("number_day", $number_day);
+        User::where("id", $data->user_id)->increment("number_day", $number_day);
         return $Sub;
     }
 

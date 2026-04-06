@@ -6,12 +6,21 @@ use Illuminate\Database\Eloquent\Model;
 
 class NutritionVersions extends Model
 {
+     public $timestamps = false;
     protected $table = 'nutrition_versions';
 
     protected $fillable = [
         'user_nutrition_plan_id',
         'daily_calories',
+        'daily_protein',
+        'daily_carbs',
+        'daily_fat',
+        'reason',
         'is_active',
+    ];
+
+    protected $casts = [
+        'is_active' => 'boolean',
     ];
 
     public function nutritions()
@@ -26,8 +35,13 @@ class NutritionVersions extends Model
             ->withTimestamps();
     }
 
-    public function NutritionPlans()
+    public function foodItems()
     {
-        return $this->hasMany(UserNutritionPlans::class, "user_nutrition_plan_id");
+        return $this->hasMany(NutritionFoodItems::class, 'nutrition_version_id');
+    }
+
+    public function userNutritionPlan()
+    {
+        return $this->belongsTo(UserNutritionPlans::class, 'user_nutrition_plan_id');
     }
 }
