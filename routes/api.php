@@ -2,6 +2,7 @@
 
 
 
+use App\Http\Controllers\AdminPlanManagementController;
 use App\Http\Controllers\AIController;
 use App\Http\Controllers\api\AuthController;
 use App\Http\Controllers\DashBoardController;
@@ -147,4 +148,7 @@ Route::post('/analyze-progress', [AIController::class, 'analyzeProgress']);
 
 // Modification Requests CRUD
 Route::middleware('auth:sanctum')->apiResource('modification-requests', ModificationRequestController::class);
+//**************** */
+Route::get('/PendingTrainingPlans', [AdminPlanManagementController::class, 'getPendingTrainingPlans']);
+Route::post('/PendingTrainingPlans', [AdminPlanManagementController::class, 'saveEditedTrainingPlan']);
 
