@@ -151,4 +151,6 @@ Route::middleware('auth:sanctum')->apiResource('modification-requests', Modifica
 //**************** */
 Route::get('/PendingTrainingPlans', [AdminPlanManagementController::class, 'getPendingTrainingPlans']);
 Route::post('/PendingTrainingPlans', [AdminPlanManagementController::class, 'saveEditedTrainingPlan']);
+Route::get('/PendingNutritionPlans', [AdminPlanManagementController::class, 'getPendingNutritionPlans']);
+Route::post('/PendingNutritionPlans', [AdminPlanManagementController::class, 'saveEditedNutritionPlan']);
 
