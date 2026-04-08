@@ -358,8 +358,6 @@ class AIController extends Controller
     private function saveTrainingPlan($userId, $planData)
     {
         return DB::transaction(function () use ($userId, $planData) {
-
-
             $planDataContent = $planData['plan_data'] ?? $planData;
 
             $UserProgram = $this->userProgramService->createUserProgram([
@@ -398,9 +396,6 @@ class AIController extends Controller
             if (!empty($exercises)) {
                 ProgramExercises::insert($exercises);
             }
-
-
-
             return $UserProgram;
         });
     }

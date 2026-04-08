@@ -4,6 +4,7 @@
 
 use App\Http\Controllers\AdminPlanManagementController;
 use App\Http\Controllers\AIController;
+use App\Http\Controllers\AIRequestModifcationController;
 use App\Http\Controllers\api\AuthController;
 use App\Http\Controllers\DashBoardController;
 use App\Http\Controllers\ExercisesController;
@@ -153,4 +154,10 @@ Route::get('/PendingTrainingPlans', [AdminPlanManagementController::class, 'getP
 Route::post('/PendingTrainingPlans', [AdminPlanManagementController::class, 'saveEditedTrainingPlan']);
 Route::get('/PendingNutritionPlans', [AdminPlanManagementController::class, 'getPendingNutritionPlans']);
 Route::post('/PendingNutritionPlans', [AdminPlanManagementController::class, 'saveEditedNutritionPlan']);
+//******************************* */
+Route::get('/modification-requests/training', [AIRequestModifcationController::class, 'getTrainingModificationRequests']);
+Route::get('/modification-requests/nutrition', [AIRequestModifcationController::class, 'getNutritionModificationRequests']);
+Route::post('/modification-requests/training/{id}', [AIRequestModifcationController::class, 'approveTraining']);
+Route::post('/modification-requests/nutrition/{id}', [AIRequestModifcationController::class, 'approveNutrition']);
 
+                                                                            
