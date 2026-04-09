@@ -9,7 +9,8 @@ class UserNutritionPlans extends Model
 {
     use HasFactory;
 
-    protected $table = 'user_nutrition_plans'; 
+    public $timestamps = false;
+    protected $table = 'user_nutrition_plans';
 
     protected $fillable = [
         'name',
@@ -20,21 +21,24 @@ class UserNutritionPlans extends Model
         'active'
     ];
 
+    protected $casts = [
+        'start_date' => 'date',
+        'end_date' => 'date',
+    ];
+
     public function user()
     {
         return $this->belongsTo(User::class);
     }
 
-  
     public function nutritionVersions()
     {
         return $this->hasMany(NutritionVersions::class, 'user_nutrition_plan_id');
     }
 
-      
     public function activeVersion()
     {
         return $this->hasOne(NutritionVersions::class, 'user_nutrition_plan_id')
-                    ->where('is_active', true);
+            ->where('is_active', true);
     }
 }

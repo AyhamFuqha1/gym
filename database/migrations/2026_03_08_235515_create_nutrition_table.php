@@ -12,12 +12,20 @@ return new class extends Migration {
     {
         Schema::create('nutrition', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('general_nutrition_id')->constrained('general_nutrition')->cascadeOnDelete();
+            
+          
+            $table->foreignId('general_nutrition_id')
+                  ->constrained('general_nutrition', 'id', 'nutrition_gen_foreign')
+                  ->cascadeOnDelete();
+
             $table->string('name');
             $table->integer('calories');
             $table->float('protein');
             $table->float('carbs');
             $table->float('fat');
+            
+           
+            $table->timestamps(); 
         });
     }
 

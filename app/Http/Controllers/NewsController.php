@@ -16,9 +16,6 @@ class NewsController extends Controller
         $this->newsService = $newsService;
     }
 
-    /**
-     * Display a listing of the resource.
-     */
     public function index(Request $request)
     {
         $perPage = (int) $request->query('per_page', 10);
@@ -30,9 +27,6 @@ class NewsController extends Controller
         ]);
     }
 
-    /**
-     * Dashboard statistics for news.
-     */
     public function stats()
     {
         $stats = $this->newsService->getNewsStats();
@@ -43,9 +37,6 @@ class NewsController extends Controller
         ]);
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(NewsRequest $data)
     {
         $this->newsService->store($data->validated());
@@ -55,7 +46,6 @@ class NewsController extends Controller
             'data' => $data->validated(),
         ]);
     }
-
 
     public function destroy($id)
     {
@@ -67,13 +57,11 @@ class NewsController extends Controller
                 'message' => 'News deleted successfully',
                 'data' => $id,
             ], 200);
-
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'News not found or already deleted',
             ], 404);
-
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
@@ -100,7 +88,6 @@ class NewsController extends Controller
                 'message' => 'News updated successfully',
                 'data' => $updatedNews
             ], 200);
-
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->json([
                 'status' => 'error',
@@ -123,7 +110,6 @@ class NewsController extends Controller
                 'status' => 'success',
                 'data' => $news,
             ], 200);
-
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->json([
                 'status' => 'error',

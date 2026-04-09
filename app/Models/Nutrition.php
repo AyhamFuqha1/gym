@@ -33,4 +33,9 @@ class Nutrition extends Model
             ->withPivot('quantity', 'meal_type')
             ->withTimestamps();
     }
+
+    public function foodItems()
+    {
+        return $this->hasMany(NutritionFoodItems::class, 'nutrition_id');
+    }
 }

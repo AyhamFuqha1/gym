@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\members;
 use App\Models\User;
 use App\Services\MemberService;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
 use Throwable;
 
@@ -93,7 +94,8 @@ class MembersController extends Controller
                 'start_date' => 'nullable|date',
             ]);
 
-            $res = $this->memberService->reNewSubscription((object) $data);
+            $createdBy = Auth::id();
+            $res = $this->memberService->reNewSubscription((object) $data, $createdBy);
 
             return response()->json($res, 200);
         } catch (Throwable $e) {

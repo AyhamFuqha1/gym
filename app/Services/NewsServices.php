@@ -7,8 +7,6 @@ use Carbon\Carbon;
 
 class NewsServices
 {
-
-
     public function getPaginatedNews($perPage = 10)
     {
         $paginated = News::with('user')
@@ -44,13 +42,14 @@ class NewsServices
         if (!empty($data['expires_at'])) {
             $data['expires_at'] = Carbon::parse($data['expires_at'])->format('Y-m-d H:i:s');
         }
+
         return News::create($data);
     }
 
     public function destroy($id)
     {
         $new = News::findOrFail($id);
-        return $new->update(['status'=>'deleted']);
+        return $new->update(['status' => 'deleted']);
     }
 
     public function update($id, array $data)
@@ -66,7 +65,7 @@ class NewsServices
         ) {
             $data['published_at'] = now();
         }
-        
+
         if (!empty($data['expires_at'])) {
             $data['expires_at'] = Carbon::parse($data['expires_at'])->format('Y-m-d H:i:s');
         }
@@ -82,7 +81,6 @@ class NewsServices
         $news = News::with('user')->findOrFail($id);
         return $this->formatNews($news);
     }
-
 
     private function formatNews(News $news)
     {
@@ -107,7 +105,6 @@ class NewsServices
             'remaining_days' => $remainingDays,
         ];
     }
-
 
     public function getPublicNews($perPage = 10)
     {

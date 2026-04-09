@@ -9,7 +9,6 @@ use Log;
 
 class UserInjuriesController extends Controller
 {
-
     private UserInjuriesService $userInjuriesService;
 
     public function __construct(UserInjuriesService $userInjuriesService)
@@ -41,6 +40,7 @@ class UserInjuriesController extends Controller
     public function show($id)
     {
         $Injuries = $this->userInjuriesService->show($id);
+
         if (!$Injuries) {
             return response()->json([
                 'success' => false,
@@ -52,12 +52,12 @@ class UserInjuriesController extends Controller
             'success' => true,
             'data' => $Injuries
         ]);
-
     }
 
     public function update(Request $request, $id)
     {
         $Injuries = $this->userInjuriesService->update($id, $request->all());
+
         if (!$Injuries) {
             return response()->json([
                 'success' => false,
@@ -70,7 +70,6 @@ class UserInjuriesController extends Controller
             'message' => 'Injurie updated successfully',
             'data' => $Injuries
         ]);
-
     }
 
     public function destroy($id)

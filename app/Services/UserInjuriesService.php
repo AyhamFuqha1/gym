@@ -7,33 +7,27 @@ use App\Models\UserInjuries;
 
 class UserInjuriesService
 {
-
-
-
     public function index()
     {
         return UserInjuries::all();
     }
-
 
     public function store($data)
     {
         return UserInjuries::create($data);
     }
 
-
     public function show($id)
     {
         return UserInjuries::find($id);
     }
 
-
     public function update($id, $data)
     {
         $Injuries = UserInjuries::findOrFail($id);
-        return $Injuries->update($data);
+        $Injuries->update($data);
+        return $Injuries->fresh();
     }
-
 
     public function destroy($id)
     {
@@ -49,16 +43,12 @@ class UserInjuriesService
             return [
                 'id' => $injury->id,
                 'user_name' => $injury->user->name,
-                'injury_type' => $injury->injury_type, 
-                'severity' => $injury->severity, 
-                'status' => $injury->status, 
-
-                
+                'injury_type' => $injury->injury_type,
+                'severity' => $injury->severity,
+                'status' => $injury->status,
                 'exercise_restrictions' => $injury->adjustments->map(function ($adj) {
                     return $adj->oldExercise->name ?? 'Unknown Exercise';
                 }),
-
-          
                 'ai_alternatives' => $injury->adjustments->map(function ($adj) {
                     return $adj->newExercise->name ?? 'No Alternative';
                 }),

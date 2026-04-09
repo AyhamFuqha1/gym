@@ -16,6 +16,9 @@ return new class extends Migration {
             $table->foreignId('nutrition_version_id')->constrained()->cascadeOnDelete();
             $table->date('start_date');
             $table->date('end_date')->nullable();
+            $table->boolean('active')->default(1);
+            
+
         });
     }
 

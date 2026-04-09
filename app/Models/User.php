@@ -11,14 +11,15 @@ use Laravel\Sanctum\HasApiTokens;
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable;
-    use HasApiTokens, Notifiable;
+    use HasFactory, HasApiTokens, Notifiable;
 
     /**
      * The attributes that are mass assignable.
      *
      * @var list<string>
      */
+    public $timestamps = false;
+
     protected $fillable = [
         'name',
         'email',
@@ -53,9 +54,14 @@ class User extends Authenticatable
         return $this->hasMany(UserInjuries::class, 'user_id');
     }
 
+    public function injuriesActive()
+    {
+        return $this->hasMany(UserInjuries::class, 'user_id')->where('status', 'active');
+    }
+
     public function feedback()
     {
-        return $this->hasOne(feedback::class, 'user_id');
+        return $this->hasOne(Feedback::class, 'user_id');
     }
 
     public function Paln()
@@ -87,14 +93,14 @@ class User extends Authenticatable
     {
         return $this->belongsToMany(Food::class, 'food_user', 'user_id', 'food_id')
             ->withPivot('type')
-            ->wherePivot('type', '=','like');
+            ->wherePivot('type', '=', 'like');
     }
 
     public function dislikedFoods()
     {
         return $this->belongsToMany(Food::class, 'food_user', 'user_id', 'food_id')
             ->withPivot('type')
-            ->wherePivot('type', '=','dislike');
+            ->wherePivot('type', '=', 'dislike');
     }
 
     public function UserNutritionPlan()

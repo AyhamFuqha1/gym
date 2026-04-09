@@ -15,6 +15,7 @@ class GeneralExercisesController extends Controller
     {
         $this->generalExercisesService = $generalExercisesService;
     }
+
     public function index()
     {
         try {
@@ -30,19 +31,18 @@ class GeneralExercisesController extends Controller
         }
     }
 
-
     public function store(Request $request)
     {
         try {
-        $data = $request->validate([
-            'name' => 'required|string|max:255|unique:general_exercises,name',
-            'muscle_group' => 'required|string|max:255',
-            'description' => 'nullable|string',
+            $data = $request->validate([
+                'name' => 'required|string|max:255|unique:general_exercises,name',
+                'muscle_group' => 'required|string|max:255',
+                'description' => 'nullable|string',
             ]);
+
             $res = $this->generalExercisesService->store($data);
             return response()->json($res, 201);
-        } 
-        catch (Throwable $e) {
+        } catch (Throwable $e) {
             return response()->json([
                 'message' => $e->getMessage(),
                 'file' => $e->getFile(),
@@ -51,7 +51,6 @@ class GeneralExercisesController extends Controller
             ], 500);
         }
     }
-
 
     public function show($id)
     {
@@ -68,16 +67,16 @@ class GeneralExercisesController extends Controller
         }
     }
 
-
     public function update(Request $request, $id)
     {
         try {
-        $data = $request->validate([
-            'name' => 'sometimes|string|max:255|unique:general_exercises,name,' . $id,
-            'muscle_group' => 'sometimes|string|max:255',
-            'description' => 'sometimes|nullable|string',
+            $data = $request->validate([
+                'name' => 'sometimes|string|max:255|unique:general_exercises,name,' . $id,
+                'muscle_group' => 'sometimes|string|max:255',
+                'description' => 'sometimes|nullable|string',
             ]);
-            $res = $this->generalExercisesService->update($id,$data);
+
+            $res = $this->generalExercisesService->update($id, $data);
             return response()->json($res, 200);
         } catch (Throwable $e) {
             return response()->json([
@@ -88,7 +87,6 @@ class GeneralExercisesController extends Controller
             ], 500);
         }
     }
-
 
     public function destroy($id)
     {

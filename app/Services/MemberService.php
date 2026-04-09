@@ -29,7 +29,7 @@ class MemberService
 
         $today = Carbon::today();
 
-       if (
+        if (
             $latestSubscription->status === 'active' &&
             Carbon::parse($latestSubscription->end_date)->lte($today)
         ) {
@@ -76,20 +76,20 @@ class MemberService
     {
         $this->syncExpiredSubscriptionStatusesForMembers();
 
-        $query = DB::table("users")
-            ->where("users.role_id", 4)
-            ->leftJoin("subscriptions", function ($join) {
-                $join->on("users.id", "=", "subscriptions.user_id")
+        $query = DB::table('users')
+            ->where('users.role_id', 4)
+            ->leftJoin('subscriptions', function ($join) {
+                $join->on('users.id', '=', 'subscriptions.user_id')
                     ->whereRaw('subscriptions.id IN (SELECT MAX(id) FROM subscriptions GROUP BY user_id)');
             })
-            ->leftJoin("plans", "subscriptions.plan_id", "=", "plans.id");
+            ->leftJoin('plans', 'subscriptions.plan_id', '=', 'plans.id');
 
         $members = $query->select(
-            "users.id",
-            "users.name as user_name",
-            "plans.name as plan_name",
-            "subscriptions.status",
-            "subscriptions.end_date"
+            'users.id',
+            'users.name as user_name',
+            'plans.name as plan_name',
+            'subscriptions.status',
+            'subscriptions.end_date'
         )->get();
 
         $stats = [
@@ -100,21 +100,20 @@ class MemberService
 
         return [
             'stats' => $stats,
-            'members' => $members
+            'members' => $members,
         ];
     }
 
     public function store($data, $admin)
     {
         return DB::transaction(function () use ($data, $admin) {
-           //$tempPassword = random_int(10000000, 99999999);
-            // TEMP: fixed default password for development/testing
             $tempPassword = '123456';
+
             DB::table('users')->insertGetId([
                 'name' => $data->name,
                 'email' => $data->email,
                 'password' => Hash::make($tempPassword),
-                'role_id' => $data->role_id
+                'role_id' => $data->role_id,
             ]);
 
             sendRegisterEmailJob::dispatch($data->email, $data->name, $tempPassword);
@@ -133,9 +132,9 @@ class MemberService
             ->get();
     }
 
-    public function reNewSubscription($data)
+    public function reNewSubscription($data, $createdBy = null)
     {
-        return DB::transaction(function () use ($data) {
+        return DB::transaction(function () use ($data, $createdBy) {
             $this->syncExpiredSubscriptionStatusForUser((int) $data->user_id);
 
             $plan = Plan::findOrFail($data->plan_id);
@@ -164,6 +163,10 @@ class MemberService
                 'end_date' => $endDate->toDateString(),
                 'status' => 'active',
             ];
+
+            if ($createdBy !== null) {
+                $sub['created_by'] = $createdBy;
+            }
 
             $createdSubscription = Subscription::create($sub);
 
@@ -201,8 +204,8 @@ class MemberService
                 'status' => 'frozen',
             ]);
 
-            User::where("id", $id)->update([
-                "status" => "frozen"
+            User::where('id', $id)->update([
+                'status' => 'frozen',
             ]);
 
             return [
@@ -230,9 +233,9 @@ class MemberService
                     'status' => 'expired',
                 ]);
 
-                User::where("id", $id)->update([
-                    "status" => "expired",
-                    "number_day" => 0,
+                User::where('id', $id)->update([
+                    'status' => 'expired',
+                    'number_day' => 0,
                 ]);
 
                 throw new \Exception('Cannot resume an expired subscription. Please renew it.');
@@ -244,9 +247,9 @@ class MemberService
 
             $remainingDays = Carbon::today()->diffInDays(Carbon::parse($latestSubscription->end_date));
 
-            User::where("id", $id)->update([
-                "status" => "active",
-                "number_day" => $remainingDays,
+            User::where('id', $id)->update([
+                'status' => 'active',
+                'number_day' => $remainingDays,
             ]);
 
             return [
@@ -282,7 +285,7 @@ class MemberService
 
         $foodsAvailable = Food::whereDoesntHave('users', function ($q) use ($id) {
             $q->where('user_id', $id)
-              ->where('type', 'dislike');
+                ->where('type', 'dislike');
         })->get();
 
         return [

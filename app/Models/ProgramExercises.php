@@ -14,11 +14,11 @@ class ProgramExercises extends Model
         'sets',
         'reps',
         'rest_seconds',
+        'difficulty',
         'day_number',
         'order_in_day'
     ];
 
-    
     public function exercise()
     {
         return $this->belongsTo(Exercises::class, 'exercise_id', 'id');

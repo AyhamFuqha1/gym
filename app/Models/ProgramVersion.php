@@ -6,11 +6,13 @@ use Illuminate\Database\Eloquent\Model;
 
 class ProgramVersion extends Model
 {
-protected $table = 'program_versions';
+    protected $table = 'program_versions';
+    public $timestamps = false;
 
     protected $fillable = [
         'user_id',
         'program_exercise_id',
+        'user_programme_id',
         'name',
         'level',
         'source_type',
@@ -23,7 +25,6 @@ protected $table = 'program_versions';
         return $this->belongsTo(User::class, 'user_id');
     }
 
-
     public function exercises()
     {
         return $this->hasMany(ProgramExercises::class, 'program_version_id');
@@ -32,6 +33,11 @@ protected $table = 'program_versions';
     public function adjustments()
     {
         return $this->hasMany(InjuryProgramAdjustments::class, 'program_version_id');
+    }
+
+    public function userPrograms()
+    {
+        return $this->hasMany(UserProgram::class, 'program_version_id');
     }
 
     public function injury()

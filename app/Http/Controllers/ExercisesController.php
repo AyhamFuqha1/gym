@@ -12,13 +12,11 @@ use Throwable;
 class ExercisesController extends Controller
 {
     private ExercisesService $exercisesService;
+
     public function __construct(ExercisesService $exercisesService)
     {
         $this->exercisesService = $exercisesService;
     }
-
-
-
 
     public function store(storeExerciseRequest $request)
     {
@@ -34,7 +32,6 @@ class ExercisesController extends Controller
             ], 500);
         }
     }
-
 
     public function show($id)
     {
@@ -66,7 +63,6 @@ class ExercisesController extends Controller
         }
     }
 
-
     public function update(UpdateExerciseRequest $request, $id)
     {
         try {
@@ -88,7 +84,6 @@ class ExercisesController extends Controller
             ], 500);
         }
     }
-
 
     public function destroy($id)
     {

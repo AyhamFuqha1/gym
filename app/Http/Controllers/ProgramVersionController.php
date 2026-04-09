@@ -2,48 +2,90 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\ProgramVersion;
-use Illuminate\Http\Request;
+use App\Http\Requests\StoreProgramVersionRequest;
+use App\Http\Requests\UpdateProgramVersionRequest;
+use App\Services\ProgramVersionService;
+use Illuminate\Http\JsonResponse;
 
 class ProgramVersionController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
+    private ProgramVersionService $programVersionService;
+
+    public function __construct(ProgramVersionService $programVersionService)
     {
-        //
+        $this->programVersionService = $programVersionService;
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
+    public function index(): JsonResponse
     {
-        //
+        $programVersions = $this->programVersionService->getProgramVersionsByUser(auth()->id());
+
+        return response()->json([
+            'success' => true,
+            'data' => $programVersions
+        ]);
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(ProgramVersion $programVersion)
+    public function store(StoreProgramVersionRequest $request): JsonResponse
     {
-        //
+        $programVersion = $this->programVersionService->createProgramVersion($request->validated());
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Program version created successfully',
+            'data' => $programVersion
+        ], 201);
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, ProgramVersion $programVersion)
+    public function show(int $id): JsonResponse
     {
-        //
+        $programVersion = $this->programVersionService->getProgramVersion($id);
+
+        if (!$programVersion) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Program version not found'
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => $programVersion
+        ]);
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(ProgramVersion $programVersion)
+    public function update(UpdateProgramVersionRequest $request, int $id): JsonResponse
     {
-        //
+        $programVersion = $this->programVersionService->updateProgramVersion($id, $request->validated());
+
+        if (!$programVersion) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Program version not found'
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Program version updated successfully',
+            'data' => $programVersion
+        ]);
+    }
+
+    public function destroy(int $id): JsonResponse
+    {
+        $deleted = $this->programVersionService->deleteProgramVersion($id);
+
+        if (!$deleted) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Program version not found'
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Program version deleted successfully'
+        ]);
     }
 }
