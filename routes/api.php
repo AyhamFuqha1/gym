@@ -57,7 +57,7 @@ Route::middleware('auth:sanctum')->group(function () {
 });
 
 /* General Exercises */
-Route::middleware(['auth:sanctum', 'check.sub'])->group(function () {
+Route::middleware('auth:sanctum')->group(function () {
     Route::get('/generalExercise', [GeneralExercisesController::class, 'index']);
 });
 Route::post('/generalExercise', [GeneralExercisesController::class, 'store']);
