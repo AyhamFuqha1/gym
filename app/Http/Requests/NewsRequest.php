@@ -22,10 +22,13 @@ class NewsRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'user_id'=>"required|exists:users,id",
-            'title'=>'required|string',
-            'content'=>'required',
-            'status'=>"in:public,draft,deleted"
+            'user_id' => "required|exists:users,id",
+            'title' => 'required|string',
+            'content' => 'required',
+            'status' => "in:public,draft,deleted",
+
+            'emails' => 'required|array',
+            'emails.*' => 'email',
         ];
     }
 }

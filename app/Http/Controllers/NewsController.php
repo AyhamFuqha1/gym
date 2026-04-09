@@ -48,8 +48,8 @@ class NewsController extends Controller
      */
     public function store(NewsRequest $data)
     {
+        
         $this->newsService->store($data->validated());
-
         return response()->json([
             'status' => 'success',
             'data' => $data->validated(),

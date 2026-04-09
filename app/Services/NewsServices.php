@@ -2,8 +2,10 @@
 
 namespace App\Services;
 
+use App\Jobs\SendNewEmail;
 use App\Models\News;
 use Carbon\Carbon;
+use DB;
 
 class NewsServices
 {
@@ -44,13 +46,18 @@ class NewsServices
 
     public function store($data)
     {
-        return News::create($data);
+        DB::transaction(function () use ($data) {
+            News::create($data);
+            foreach ($data['emails'] as $email) {
+                SendNewEmail::dispatch($email,$data['title'],$data['content']);
+            }
+        });
     }
 
     public function destroy($id)
     {
         $new = News::findOrFail($id);
-        return $new->update(['status'=>'deleted']);
+        return $new->update(['status' => 'deleted']);
     }
 
     public function update($id, array $data)
