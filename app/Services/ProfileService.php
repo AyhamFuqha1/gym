@@ -15,19 +15,19 @@ class ProfileService
     }
 
     /**
-     * Get profile
+     * Get profile by user_id
      */
-    public function getProfile(int $id): ?Profile
+    public function getProfileByUserId(int $userId): ?Profile
     {
-        return Profile::find($id);
+        return Profile::where('user_id', $userId)->first();
     }
 
     /**
-     * Update profile
+     * Update profile by user_id
      */
-    public function updateProfile(int $id, array $data): ?Profile
+    public function updateProfileByUserId(int $userId, array $data): ?Profile
     {
-        $profile = Profile::find($id);
+        $profile = Profile::where('user_id', $userId)->first();
 
         if (!$profile) {
             return null;
@@ -39,11 +39,11 @@ class ProfileService
     }
 
     /**
-     * Delete profile
+     * Delete profile by user_id
      */
-    public function deleteProfile(int $id): bool
+    public function deleteProfileByUserId(int $userId): bool
     {
-        $profile = Profile::find($id);
+        $profile = Profile::where('user_id', $userId)->first();
 
         if (!$profile) {
             return false;

@@ -30,10 +30,10 @@ Route::post('/verify-otp', [AuthController::class, 'verifyOTP']);
 Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
 Route::post('/reset-password', [AuthController::class, 'restetPassword']);
 /*-----*/
-Route::get('/profile/{id}', [ProfileController::class, 'show']);
+Route::get('/profile/user/{userId}', [ProfileController::class, 'showByUserId']);
 Route::post('/profile', [ProfileController::class, 'store']);
-Route::put('/profile/{id}', [ProfileController::class, 'update']);
-Route::delete('/profile/{id}', [ProfileController::class, 'destroy']);
+Route::put('/profile/user/{userId}', [ProfileController::class, 'updateByUserId']);
+Route::delete('/profile/user/{userId}', [ProfileController::class, 'destroyByUserId']);
 /*-----*/
 Route::get('/members',[MembersController::class,'index']);
 Route::get('/members/{id}',[MembersController::class,'show']);

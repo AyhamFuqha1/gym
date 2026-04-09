@@ -107,8 +107,9 @@ class MemberService
     public function store($data, $admin)
     {
         return DB::transaction(function () use ($data, $admin) {
-            $tempPassword = random_int(10000000, 99999999);
-
+           //$tempPassword = random_int(10000000, 99999999);
+            // TEMP: fixed default password for development/testing
+            $tempPassword = '123456';
             DB::table('users')->insertGetId([
                 'name' => $data->name,
                 'email' => $data->email,

@@ -27,10 +27,9 @@ class ProfileController extends Controller
         ], 201);
     }
 
-    
-    public function show(int $id): JsonResponse
+    public function showByUserId(int $userId): JsonResponse
     {
-        $profile = $this->profileService->getProfile($id);
+        $profile = $this->profileService->getProfileByUserId($userId);
 
         if (!$profile) {
             return response()->json([
@@ -45,10 +44,9 @@ class ProfileController extends Controller
         ]);
     }
 
-    
-    public function update(UpdateProfileRequest $request, int $id): JsonResponse
+    public function updateByUserId(UpdateProfileRequest $request, int $userId): JsonResponse
     {
-        $profile = $this->profileService->updateProfile($id, $request->validated());
+        $profile = $this->profileService->updateProfileByUserId($userId, $request->validated());
 
         if (!$profile) {
             return response()->json([
@@ -64,10 +62,9 @@ class ProfileController extends Controller
         ]);
     }
 
-   
-    public function destroy(int $id): JsonResponse
+    public function destroyByUserId(int $userId): JsonResponse
     {
-        $deleted = $this->profileService->deleteProfile($id);
+        $deleted = $this->profileService->deleteProfileByUserId($userId);
 
         if (!$deleted) {
             return response()->json([
