@@ -27,7 +27,7 @@ class AIRequestModifcationService
     }
     public function getTrainingModificationRequests()
     {
-        return ModificationRequest::where('type', 'training')
+        return ModificationRequest::where('type', 'progress')
             ->where('status', 'pending')
             ->get();
     }
@@ -39,17 +39,20 @@ class AIRequestModifcationService
             ->get();
     }
 
-    public function approveTraining(Request $request, $planData, $userId, $idModification)
+    public function approveTraining(Request $request, $idModification)
     {
         $request->validate([
-            'idModification' => 'required|exists:modification_requests,id',
-            'plan_id' => 'required|exists:nutrition_versions,id',
-            'daily_meals' => 'required|array'
+            'user_id' => 'required|exists:users,id',
+            'plan_data' => 'required|array',
         ]);
-        return DB::transaction(function () use ($userId, $planData, $idModification) {
+
+        return DB::transaction(function () use ($request, $idModification) {
             $modificationRequest = ModificationRequest::findOrFail($idModification);
             $modificationRequest->update(['status' => 'done']);
-            $planDataContent = $planData['plan_data'] ?? $planData;
+
+            $userId = $request->user_id;
+            $planDataContent = $request->plan_data['plan_data'] ?? $request->plan_data;
+
             $UserProgram = $this->userProgramService->createUserProgram([
                 'user_id' => $userId,
                 'start_date' => now(),
@@ -60,15 +63,15 @@ class AIRequestModifcationService
             $programVersion = $this->programVersionService->createProgramVersion([
                 'name' => $planDataContent['version'] ?? 'My Training Plan',
                 'level' => 'intermediate',
-                'user_programme_id' => $UserProgram->id,
+                'user_program_id' => $UserProgram->id,
                 'is_active' => 'pending',
                 'source_type' => 'new',
                 'source_id' => null,
             ]);
 
             $exercises = [];
-
             $schedule = $planDataContent['schedule'] ?? [];
+
             foreach ($schedule as $day) {
                 foreach ($day['exercises'] as $exercise) {
                     $exercises[] = [
@@ -89,7 +92,6 @@ class AIRequestModifcationService
 
             return $UserProgram;
         });
-
     }
 
     public function approveNutrition(Request $request, $idModification)
@@ -107,6 +109,10 @@ class AIRequestModifcationService
                 'user_nutrition_plan_id' => $oldPlan->user_nutrition_plan_id,
                 'reason' => $request->reason ?? null,
                 'is_active' => 'active',
+                'daily_calories' => 0,
+                'daily_protein' => 0,
+                'daily_carbs' => 0,
+                'daily_fat' => 0,
             ]);
             $daily_calories = 0;
             $daily_protein = 0;

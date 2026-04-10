@@ -24,6 +24,8 @@ class UpdateModificationRequest extends FormRequest
         return [
             'user_id' => 'sometimes|exists:users,id',
             'program_version_id' => 'sometimes|exists:program_versions,id',
+            'status' => 'sometimes|in:pending,done',
+            'type' => 'sometimes|in:progress,nutrition',
             'changes_summary' => 'nullable|array',
             'modified_plan' => 'nullable|array',
             'recommendations' => 'nullable|array',

@@ -33,20 +33,20 @@ class AIRequestModifcationController extends Controller
         }
     }
 
-    public function approveTraining($id)
+    public function approveTraining(Request $request, $id)
     {
-        try{
-            $this->aiRequestModificationService->approveTraining($id);
+        try {
+            $this->aiRequestModificationService->approveTraining($request, $id);
             return response()->json(['success' => true, 'message' => 'Training modification approved successfully'], 200);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
     }
 
-    public function approveNutrition($id)
+    public function approveNutrition(Request $request, $id)
     {
-        try{
-            $this->aiRequestModificationService->approveNutrition($id);
+        try {
+            $this->aiRequestModificationService->approveNutrition($request, $id);
             return response()->json(['success' => true, 'message' => 'Nutrition modification approved successfully'], 200);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);

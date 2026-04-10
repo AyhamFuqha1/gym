@@ -24,6 +24,8 @@ class StoreModificationRequest extends FormRequest
         return [
             'user_id' => 'required|exists:users,id',
             'program_version_id' => 'required|exists:program_versions,id',
+            'type' => 'required|in:progress,nutrition',
+            'status' => 'nullable|in:pending,done,rejected,approved',
             'changes_summary' => 'nullable|array',
             'modified_plan' => 'nullable|array',
             'recommendations' => 'nullable|array',

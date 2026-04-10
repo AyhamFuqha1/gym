@@ -23,7 +23,7 @@ class StoreNutritionFoodItemRequest extends FormRequest
     {
         return [
             'nutrition_version_id' => 'required|exists:nutrition_versions,id',
-            'nutrition_id' => 'required|exists:nutrition,id',
+            'nutrition_id' => 'required|exists:foods,id',
             'quantity' => 'nullable|string|max:255',
             'meal_type' => 'required|in:breakfast,lunch,dinner,snack',
         ];

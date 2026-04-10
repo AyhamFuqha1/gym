@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use App\Models\Role;
+
 
 class User extends Authenticatable
 {
@@ -111,5 +113,10 @@ class User extends Authenticatable
     public function UserNutritionPlanActive()
     {
         return $this->hasMany(UserNutritionPlans::class, 'user_id')->where('active', 1);
+    }
+
+    public function role()
+    {
+        return $this->belongsTo(Role::class, 'role_id');
     }
 }

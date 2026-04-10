@@ -51,25 +51,34 @@ class AdminPlanManagementService
             $oldPlan = ProgramVersion::findOrFail($request->plan_id);
 
 
+            $user = \Illuminate\Support\Facades\Auth::user();
+
+            if ($user->role_id == 2) {
+                $sourceType = 'admin_edit';
+            } elseif ($user->role_id == 3) {
+                $sourceType = 'coach_edit';
+            } else {
+                $sourceType = $oldPlan->source_type;
+            }
+
             $newPlan = ProgramVersion::create([
-                'name' => 'version_' . time(),
+                'name' => $request->name ?? ($oldPlan->name . ' Edited'),
                 'level' => $oldPlan->level,
-                'user_programme_id' => $oldPlan->user_programme_id,
-                'source_type' => 'admin_edit',
+                'user_program_id' => $oldPlan->user_program_id,
+                'source_type' => $sourceType,
                 'source_id' => $oldPlan->id,
                 'is_active' => 'accepted',
             ]);
-
 
             foreach ($request->schedule as $day) {
                 foreach ($day['exercises'] as $exercise) {
                     ProgramExercises::create([
                         'program_version_id' => $newPlan->id,
-                        'exercise_id' => $exercise['exercise_id'],
+                        'exercise_id' => $exercise['id'],
                         'sets' => $exercise['sets'],
                         'reps' => $exercise['reps'],
                         'rest_seconds' => $exercise['rest_seconds'] ?? null,
-                        'day_number' => $day['day'],
+                        'day_number' => $day['day_number'],
                         'difficulty' => $exercise['difficulty'] ?? 'medium',
                     ]);
                 }
@@ -81,13 +90,17 @@ class AdminPlanManagementService
 
     public function getPendingNutritionPlans()
     {
-        return NutritionVersions::with('foodItems.nutrition')->where('is_active', 'pending')->get()->map(function ($plan) {
+        return NutritionVersions::with('foodItems.nutrition')
+        ->where('is_active', 'pending')
+        ->get()
+        ->map(function ($plan) {
             return [
                 'id' => $plan->id,
                 'daily_calories' => $plan->daily_calories,
                 'daily_protein' => $plan->daily_protein,
                 'daily_carbs' => $plan->daily_carbs,
                 'daily_fat' => $plan->daily_fat,
+                'is_active' => $plan->is_active,
                 'reason' => $plan->reason,
                 'food_items' => $plan->foodItems->map(function ($item) {
                     return [
@@ -106,43 +119,58 @@ class AdminPlanManagementService
         return DB::transaction(function () use ($request) {
             $request->validate([
                 'plan_id' => 'required|exists:nutrition_versions,id',
-                'daily_meals' => 'required|array'
+                'daily_meals' => 'required|array',
             ]);
+
             $oldPlan = NutritionVersions::findOrFail($request->plan_id);
-            $newPlan = NutritionVersions::create([
-                'user_nutrition_plan_id' => $oldPlan->user_nutrition_plan_id,
-                'reason' => $request->reason ?? null,
-                'is_active' => 'active',
-            ]);
+
             $daily_calories = 0;
             $daily_protein = 0;
             $daily_carbs = 0;
             $daily_fat = 0;
-            $Nutrition = [];
+            $nutritionItems = [];
 
             foreach ($request->daily_meals as $meal) {
-                collect($meal['items'])->each(function ($item) use (&$Nutrition, &$newPlan, &$daily_calories, &$daily_protein, &$daily_carbs, &$daily_fat, $meal) {
-                    $Nutrition[] = [
+                foreach ($meal['items'] as $item) {
+                    $daily_calories += $item['calories'] * $item['quantity'];
+                    $daily_protein += $item['protein'] * $item['quantity'];
+                    $daily_carbs += $item['carbs'] * $item['quantity'];
+                    $daily_fat += $item['fat'] * $item['quantity'];
+                }
+            }
+
+            $newPlan = NutritionVersions::create([
+                'user_nutrition_plan_id' => $oldPlan->user_nutrition_plan_id,
+                'daily_calories' => $daily_calories,
+                'daily_protein' => $daily_protein,
+                'daily_carbs' => $daily_carbs,
+                'daily_fat' => $daily_fat,
+                'reason' => $request->reason ?? null,
+                'is_active' => 'active',
+            ]);
+
+            foreach ($request->daily_meals as $meal) {
+                foreach ($meal['items'] as $item) {
+                    $nutritionItems[] = [
                         'nutrition_version_id' => $newPlan->id,
                         'nutrition_id' => $item['food_id'],
                         'quantity' => $item['quantity'],
                         'meal_type' => $meal['meal'],
                     ];
-
-                    $daily_calories += $item['calories'] * $item['quantity'];
-                    $daily_protein += $item['protein'] * $item['quantity'];
-                    $daily_carbs += $item['carbs'] * $item['quantity'];
-                    $daily_fat += $item['fat'] * $item['quantity'];
-                });
+                }
             }
-            NutritionFoodItems::insert($Nutrition);
-            $newPlan->update([
-                'daily_calories' => $daily_calories,
-                'daily_protein' => $daily_protein,
-                'daily_carbs' => $daily_carbs,
-                'daily_fat' => $daily_fat,
+
+            NutritionFoodItems::insert($nutritionItems);
+
+            $oldPlan->update([
+                'is_active' => 'cancel',
             ]);
-            $oldPlan->update(['is_active' => 'cancel']);
+
+            return [
+                'status' => true,
+                'message' => 'Nutrition plan updated successfully',
+                'data' => $newPlan->load('foodItems.nutrition'),
+            ];
         });
     }
 

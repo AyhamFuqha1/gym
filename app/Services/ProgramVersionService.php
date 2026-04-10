@@ -27,7 +27,7 @@ class ProgramVersionService
      */
     public function getProgramVersionsByUser(int $userId): \Illuminate\Database\Eloquent\Collection
     {
-        return ProgramVersion::where('user_id', $userId)->get();
+        return ProgramVersion::all();
     }
 
     /**

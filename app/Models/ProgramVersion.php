@@ -12,7 +12,7 @@ class ProgramVersion extends Model
     protected $fillable = [
         'user_id',
         'program_exercise_id',
-        'user_programme_id',
+        'user_program_id',
         'name',
         'level',
         'source_type',

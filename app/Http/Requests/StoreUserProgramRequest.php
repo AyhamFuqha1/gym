@@ -26,7 +26,7 @@ class StoreUserProgramRequest extends FormRequest
             'program_version_id' => 'required|exists:program_versions,id',
             'start_date' => 'required|date|before_or_equal:end_date',
             'end_date' => 'nullable|date|after_or_equal:start_date',
-            'status' => 'required|string|in:active,inactive,completed',
+            'status' => 'required|string|in:pending,active,cancelled',
         ];
     }
 }

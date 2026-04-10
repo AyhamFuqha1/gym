@@ -22,8 +22,7 @@ class StoreProgramVersionRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'user_id' => 'required|exists:users,id',
-            'program_exercise_id' => 'nullable|exists:program_exercises,id',
+            'user_program_id' => 'required|exists:user_programs,id',
             'name' => 'required|string|max:255',
             'level' => 'required|string|max:255',
             'source_type' => 'nullable|string|in:injury,ai,goal,coach',

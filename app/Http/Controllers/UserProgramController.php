@@ -6,6 +6,7 @@ use App\Http\Requests\StoreUserProgramRequest;
 use App\Http\Requests\UpdateUserProgramRequest;
 use App\Services\UserProgramService;
 use Illuminate\Http\JsonResponse;
+use App\Models\UserProgram;
 
 class UserProgramController extends Controller
 {
@@ -21,7 +22,7 @@ class UserProgramController extends Controller
      */
     public function index(): JsonResponse
     {
-        $userPrograms = $this->userProgramService->getUserProgramsByUser(auth()->id());
+        $userPrograms = UserProgram::all();
 
         return response()->json([
             'success' => true,

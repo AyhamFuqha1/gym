@@ -117,7 +117,7 @@ Route::middleware('auth:sanctum')->get('/dashboard', [DashBoardController::class
 Route::middleware('auth:sanctum')->apiResource('user-goals', UserGoalController::class);
 
 /* AI + extra APIs from Ayham */
-Route::post('/ai/generate', [AIController::class, 'generateProgram']);
+Route::post('/ai/generate', [AIController::class, 'generateProgram']);////////////////////////
 Route::get('/subscriptionForAdmin', [SubscriptionController::class, 'show']);
 Route::post('/sync-all', [AIController::class, 'syncAll']);
 Route::post('/search-exercises', [AIController::class, 'searchExercises']);
@@ -143,17 +143,18 @@ Route::middleware('auth:sanctum')->apiResource('nutrition-versions', NutritionVe
 /* Nutrition Food Items */
 Route::middleware('auth:sanctum')->apiResource('nutrition-food-items', NutritionFoodItemsController::class);
 
-/* Modification Requests */
-Route::middleware('auth:sanctum')->apiResource('modification-requests', ModificationRequestController::class);
 
 /* Pending Plans */
-Route::get('/PendingTrainingPlans', [AdminPlanManagementController::class, 'getPendingTrainingPlans']);
-Route::post('/PendingTrainingPlans', [AdminPlanManagementController::class, 'saveEditedTrainingPlan']);
-Route::get('/PendingNutritionPlans', [AdminPlanManagementController::class, 'getPendingNutritionPlans']);
-Route::post('/PendingNutritionPlans', [AdminPlanManagementController::class, 'saveEditedNutritionPlan']);
-
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/PendingTrainingPlans', [AdminPlanManagementController::class, 'getPendingTrainingPlans']);
+    Route::post('/PendingTrainingPlans', [AdminPlanManagementController::class, 'saveEditedTrainingPlan']);
+    Route::get('/PendingNutritionPlans', [AdminPlanManagementController::class, 'getPendingNutritionPlans']);
+    Route::post('/PendingNutritionPlans', [AdminPlanManagementController::class, 'saveEditedNutritionPlan']);
+});
 /* AI Request Modifications */
 Route::get('/modification-requests/training', [AIRequestModifcationController::class, 'getTrainingModificationRequests']);
 Route::get('/modification-requests/nutrition', [AIRequestModifcationController::class, 'getNutritionModificationRequests']);
 Route::post('/modification-requests/training/{id}', [AIRequestModifcationController::class, 'approveTraining']);
 Route::post('/modification-requests/nutrition/{id}', [AIRequestModifcationController::class, 'approveNutrition']);
+
+Route::middleware('auth:sanctum')->apiResource('modification-requests', ModificationRequestController::class);

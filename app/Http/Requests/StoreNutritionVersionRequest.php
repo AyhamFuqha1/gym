@@ -24,6 +24,10 @@ class StoreNutritionVersionRequest extends FormRequest
         return [
             'user_nutrition_plan_id' => 'required|exists:user_nutrition_plans,id',
             'daily_calories' => 'required|integer|min:1',
+            'daily_protein' => 'nullable|numeric|min:0',
+            'daily_carbs' => 'nullable|numeric|min:0',
+            'daily_fat' => 'nullable|numeric|min:0',
+            'reason' => 'nullable|string|max:255',
             'is_active' => 'boolean',
         ];
     }

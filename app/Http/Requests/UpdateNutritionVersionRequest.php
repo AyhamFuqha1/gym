@@ -24,6 +24,10 @@ class UpdateNutritionVersionRequest extends FormRequest
         return [
             'user_nutrition_plan_id' => 'sometimes|exists:user_nutrition_plans,id',
             'daily_calories' => 'sometimes|integer|min:1',
+            'daily_protein' => 'sometimes|numeric|min:0',
+            'daily_carbs' => 'sometimes|numeric|min:0',
+            'daily_fat' => 'sometimes|numeric|min:0',
+            'reason' => 'sometimes|nullable|string|max:255',
             'is_active' => 'sometimes|boolean',
         ];
     }

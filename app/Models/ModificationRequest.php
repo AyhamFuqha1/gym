@@ -9,6 +9,8 @@ class ModificationRequest extends Model
     protected $fillable = [
         'user_id',
         'program_version_id',
+        'type',
+        'status',
         'changes_summary',
         'modified_plan',
         'recommendations',

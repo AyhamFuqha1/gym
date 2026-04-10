@@ -26,7 +26,7 @@ class UpdateUserProgramRequest extends FormRequest
             'program_version_id' => 'sometimes|exists:program_versions,id',
             'start_date' => 'sometimes|date|before_or_equal:end_date',
             'end_date' => 'sometimes|nullable|date|after_or_equal:start_date',
-            'status' => 'sometimes|string|in:active,inactive,completed',
+            'status' => 'sometimes|string|in:pending,active,cancelled',
         ];
     }
 }

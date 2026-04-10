@@ -41,9 +41,7 @@ class AIController extends Controller
         try {
             $fullSync = $request->input('full_sync', false);
 
-            $response = Http::post("{$this->pythonApiUrl}/sync-all", [
-                'full_sync' => $fullSync
-            ]);
+            $response = Http::post("{$this->pythonApiUrl}/sync-all?full_sync=" . ($fullSync ? 'true' : 'false'));
             return response()->json($response->json(), $response->status());
         } catch (\Exception $e) {
             Log::error('Sync All Error: ' . $e->getMessage());
@@ -57,10 +55,8 @@ class AIController extends Controller
             $query = $request->input('query');
             $nResults = $request->input('n_results', 10);
 
-            $response = Http::post("{$this->pythonApiUrl}/search-exercises", [
-                'query' => $query,
-                'n_results' => $nResults
-            ]);
+            $url = "{$this->pythonApiUrl}/search-exercises?query=" . urlencode($query) . "&n_results=" . $nResults;
+            $response = Http::post($url);
 
             return response()->json($response->json(), $response->status());
         } catch (\Exception $e) {
@@ -370,7 +366,7 @@ class AIController extends Controller
             $programVersion = $this->programVersionService->createProgramVersion([
                 'name' => $planDataContent['version'] ?? 'My Training Plan',
                 'level' => 'intermediate',
-                'user_programme_id' => $UserProgram->id,
+                'user_program_id' => $UserProgram->id,
                 'is_active' => 'pending',
                 'source_type' => 'new',
                 'source_id' => null,

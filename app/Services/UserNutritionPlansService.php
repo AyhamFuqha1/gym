@@ -27,7 +27,7 @@ class UserNutritionPlansService
      */
     public function getUserNutritionPlansByUser(int $userId): \Illuminate\Database\Eloquent\Collection
     {
-        return UserNutritionPlans::where('user_id', $userId)->get();
+        return UserNutritionPlans::all();
     }
 
     /**
