@@ -50,17 +50,22 @@ class NewsController extends Controller
     public function destroy($id)
     {
         try {
+            $news = News::findOrFail($id);
+            $wasDeleted = $news->status === 'deleted';
+
             $this->newsService->destroy($id);
 
             return response()->json([
                 'status' => 'success',
-                'message' => 'News deleted successfully',
+                'message' => $wasDeleted
+                    ? 'News permanently deleted successfully'
+                    : 'News moved to trash successfully',
                 'data' => $id,
             ], 200);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'News not found or already deleted',
+                'message' => 'News not found',
             ], 404);
         } catch (\Exception $e) {
             return response()->json([

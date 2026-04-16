@@ -15,14 +15,30 @@ class AdminPlanManagementService
 
     public function getPendingTrainingPlans()
     {
-        $plans = ProgramVersion::with(['exercises.exercise'])
+        $plans = ProgramVersion::with([
+            'exercises.exercise',
+            'userProgram.user.Profile',
+            'userProgram.user.goals',
+        ])
             ->where('is_active', 'pending')
             ->get()
             ->map(function ($plan) {
+                $user = $plan->userProgram?->user;
+
                 return [
                     'id' => $plan->id,
                     'name' => $plan->name,
                     'description' => $plan->description,
+                    'created_at' => $plan->created_at ?? null,
+
+                    'user' => [
+                        'id' => $user?->id,
+                        'name' => $user?->name,
+                        'email' => $user?->email,
+                        'goal' => $user?->goals?->type ?? null,
+                        'level' => $user?->Profile?->activity_level ?? null,
+                    ],
+
                     'exercises' => $plan->exercises->map(function ($exercise) {
                         return [
                             'id' => $exercise->exercise_id,

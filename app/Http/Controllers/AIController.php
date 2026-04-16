@@ -106,9 +106,25 @@ class AIController extends Controller
             $planData = $response->json();
 
 
-            $plan = $this->saveTrainingPlan($id, $planData);
+            $modRequest = ModificationRequest::create([
+            'user_id' => $id,
+            'program_version_id' => null,
+            'type' => 'progress',
+            'status' => 'pending',
+            'changes_summary' => ['AI generated a new training plan'],
+            'modified_plan' => $planData,
+            'recommendations' => $planData['recommendations'] ?? [],
+            'user_feedback' => [
+                'request_type' => 'generated_plan',
+            ],
+            'source' => 'generated',
+            'source_id' => null,
+        ]);
 
-            return response()->json($planData, $response->status());
+        return response()->json([
+            'data' => $planData,
+            'modification_request_id' => $modRequest->id
+        ], $response->status());
         } catch (\Exception $e) {
             Log::error('Generate Training Plan Error: ' . $e->getMessage());
             return response()->json(['error' => $e->getMessage()], 500);
@@ -121,25 +137,51 @@ class AIController extends Controller
             $id = $request->validate([
                 'id' => 'required|integer|exists:users,id',
             ])['id'];
-            //if (UserNutritionPlans::where('active', 'pending')->where('user_id', $id)->exists()) {
-            //     return response()->json(['error' => 'You already have a pending nutrition plan. Please activate or delete it before creating a new one.'], 400);
-            //}
+
             $userSummary = $this->prepareUserSummary($id);
-            $preferences = $request->input('preferences');
-            if (is_null($preferences) || $preferences === []) {
-                $preferences = new \stdClass();
-            }
+
+            $preferences = [
+                'food_allergies' => $userSummary['food_allergies'] ?? null,
+                'medical_conditions' => $userSummary['medical_conditions'] ?? null,
+                'preferences' => $userSummary['preferences'] ?? null,
+                'goal' => $userSummary['goal'] ?? null,
+                'target_weight' => $userSummary['target_weight'] ?? null,
+                'injuries' => $userSummary['injuries'] ?? [],
+                'liked_foods' => $userSummary['liked_foods'] ?? [],
+                'disliked_foods' => $userSummary['disliked_foods'] ?? [],
+            ];
+
             $response = Http::post("{$this->pythonApiUrl}/generate-nutrition-plan", [
                 'user_summary' => $userSummary,
-                'preferences' => $preferences
+                'preferences' => $preferences,
             ]);
+
+            if (!$response->successful()) {
+                return response()->json($response->json(), $response->status());
+            }
 
             $planData = $response->json();
 
+            $modRequest = ModificationRequest::create([
+                'user_id' => $id,
+                'program_version_id' => null,
+                'type' => 'nutrition',
+                'status' => 'pending',
+                'changes_summary' => ['AI generated a new nutrition plan'],
+                'modified_plan' => $planData,
+                'recommendations' => $planData['recommendations'] ?? [],
+                'user_feedback' => [
+                    'request_type' => 'generated_plan',
+                ],
+                'source' => 'generated',
+                'source_id' => null,
+            ]);
 
-            $this->saveNutritionPlan($id, $planData, $userSummary['goal']);
+            return response()->json([
+                'data' => $planData,
+                'modification_request_id' => $modRequest->id
+            ], 200);
 
-            return response()->json($planData, $response->status());
         } catch (\Exception $e) {
             Log::error('Generate Nutrition Plan Error: ' . $e->getMessage());
             return response()->json(['error' => $e->getMessage()], 500);
@@ -148,83 +190,106 @@ class AIController extends Controller
 
     public function modifyTrainingPlan(Request $request)
     {
-        return DB::transaction(function () use ($request) {
-            try {
-                $id = $request->validate([
-                    'id' => 'required|integer|exists:users,id',
-                ])['id'];
-                $currentPlanId = $request->validate([
-                    'current_plan_id' => 'required|integer|exists:program_versions,id',
-                ])['current_plan_id'];
-                $userFeedback = $request->input('user_feedback', []);
+       $validated = $request->validate([
+            'id' => 'required|exists:users,id',
+            'current_plan_id' => 'required',
+            'user_feedback' => 'required|array',
+        ]);
 
-                $oldPlan = ProgramVersion::with(['exercises.exercise'])
-                    ->where('id', $currentPlanId)
-                    ->first();
+        $id = $validated['id'];
+        $userSummary = $this->prepareUserSummary($id);
+        $currentPlanId = (string) $validated['current_plan_id'];
+        $userFeedback = $validated['user_feedback'];
 
-                $currentPlanData = [
-                    'plan_id' => $oldPlan->id,
-                    'version' => $oldPlan->id,
-                    'plan_data' => [
-                        'schedule' => $oldPlan->exercises
-                            ->groupBy('day_number')
-                            ->map(function ($dayExercises, $day) {
-                                return [
-                                    'day' => (int) $day,
+        $oldPlan = ProgramVersion::findOrFail($currentPlanId);
 
-                                    'exercises' => $dayExercises->map(function ($ex) {
-                                        return [
-                                            'exercise_id' => $ex->exercise_id,
-                                            'name' => $ex->exercise->name ?? null,
-                                            'sets' => (int) $ex->sets,
-                                            'reps' => (string) $ex->reps,
-                                            'rest_seconds' => $ex->rest_seconds,
-                                            'muscle_group' => $ex->exercise->muscle_group ?? null,
-                                            'difficulty' => $ex->difficulty,
-                                        ];
-                                    })->values()
-                                ];
-                            })
-                            ->sortBy('day')
-                            ->values()
-                    ]
+        $oldExercises = ProgramExercises::where('program_version_id', $oldPlan->id)
+            ->with('exercise')
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'exercise_id' => $item->exercise_id,
+                    'name' => $item->exercise->name ?? null,
+                    'sets' => $item->sets,
+                    'reps' => $item->reps,
+                    'rest_seconds' => $item->rest_seconds,
+                    'muscle_group' => $item->exercise->muscle_group ?? null,
+                    'difficulty' => $item->difficulty ?? 'beginner',
+                    'day' => $item->day_number,
                 ];
-
-                $userSummary = $this->prepareUserSummary($id);
-
-                $response = Http::post("{$this->pythonApiUrl}/modify-training-plan", [
-                    'current_plan_id' => $currentPlanId,
-                    'current_plan' => $currentPlanData,
-                    'user_summary' => $userSummary,
-                    'adjustments' => [],
-                    'user_feedback' => $userFeedback
-                ]);
-
-                $suggestions = $response->json();
-
-                $modRequest = ModificationRequest::create([
-                    'user_id' => $id,
-                    'program_version_id' => $oldPlan->id,
-                    'changes_summary' => $suggestions['changes_summary'] ?? [],
-                    'modified_plan' => $suggestions['modified_plan'] ?? [],
-                    'recommendations' => $suggestions['recommendations'] ?? [],
-                    'user_feedback' => $userFeedback,
-                    'source' => 'ai',
-                    'source_id' => null,
-                ]);
+            })
+            ->groupBy('day')
+            ->map(function ($group, $day) {
+                return [
+                    'day' => (int) $day,
+                    'exercises' => array_values($group->toArray()),
+                ];
+            })
+            ->values()
+            ->toArray();
 
 
-                return response()->json([
-                    'data' => $suggestions,
-                    'modification_request_id' => $modRequest->id
-                ], $response->status());
+            $payload = [
+                'id' => $id,
+                'current_plan_id' => $currentPlanId,
+                'user_summary' => $userSummary,
+                'user_feedback' => $userFeedback,
+                'current_plan' => [
+                    'plan_id' => $oldPlan->id,
+                    'version' => 1,
+                    'plan_data' => [
+                        'schedule' => $oldExercises,
+                    ],
+                ],
+            ];
 
-            } catch (\Exception $e) {
-                Log::error('Modify Training Plan Error: ' . $e->getMessage());
-                return response()->json(['error' => $e->getMessage()], 500);
-            }
-        });
+        $response = Http::timeout(120)->post('http://127.0.0.1:8001/modify-training-plan', $payload);
 
+        if (!$response->successful()) {
+            return response()->json($response->json(), $response->status());
+        }
+
+        $data = $response->json();
+
+        if (!is_array($data)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid response returned from AI service.'
+            ], 500);
+        }
+
+        $result = isset($data['data']) && is_array($data['data'])
+            ? $data['data']
+            : $data;
+
+        $modifiedPlan = $result['modified_plan'] ?? null;
+        $recommendations = $result['recommendations'] ?? [];
+        $changesSummary = $result['changes_summary'] ?? [];
+
+        if (!$modifiedPlan || !is_array($modifiedPlan)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'AI did not return a valid modified plan.'
+            ], 500);
+        }
+
+        $modRequest = ModificationRequest::create([
+            'user_id' => $id,
+            'program_version_id' => $oldPlan->id,
+            'type' => 'progress',
+            'status' => 'pending',
+            'changes_summary' => $changesSummary,
+            'modified_plan' => $modifiedPlan,
+            'recommendations' => $recommendations,
+            'user_feedback' => $userFeedback,
+            'source' => 'modification',
+            'source_id' => null,
+        ]);
+
+        return response()->json([
+            'data' => $result,
+            'modification_request_id' => $modRequest->id
+        ], 200);
     }
 
     public function modifyNutritionPlan(Request $request)
@@ -234,29 +299,38 @@ class AIController extends Controller
                 $id = $request->validate([
                     'id' => 'required|integer|exists:users,id',
                 ])['id'];
-                $currentPlanId = $request->validate([
-                    'current_plan_id' => 'required|integer|exists:program_versions,id',
-                ])['current_plan_id'];
-                $userFeedback = $request->input('user_feedback', []);
-                $oldPlan = NutritionVersions::with('foodItems')
-                    ->where('id', $currentPlanId)
-                    ->first();
 
+                $currentPlanId = $request->validate([
+                    'current_plan_id' => 'required|integer|exists:nutrition_versions,id',
+                ])['current_plan_id'];
+
+                $userFeedback = $request->input('user_feedback', []);
+
+                $oldPlan = NutritionVersions::with('foodItems.nutrition')
+                    ->where('id', $currentPlanId)
+                    ->firstOrFail();
 
                 $dailyMeals = $oldPlan->foodItems
-                    ->groupBy('meal_type')
-                    ->map(function ($items, $mealType) {
-                        return [
-                            'meal_type' => $mealType,
-                            'foods' => $items->map(function ($item) {
-                                return [
-                                    'nutrition_id' => $item->nutrition_id,
-                                    'quantity' => $item->quantity,
-                                ];
-                            })->values()
-                        ];
-                    })
-                    ->values();
+                ->groupBy('meal_type')
+                ->map(function ($items, $mealType) {
+                    return [
+                        'meal_type' => $mealType,
+                        'foods' => $items->map(function ($item) {
+                            return [
+                                'nutrition_id' => $item->nutrition_id,
+                                'food_id' => $item->nutrition_id,
+                                'name' => $item->nutrition->name ?? '',
+                                'calories' => (float) ($item->nutrition->calories ?? 0),
+                                'protein' => (float) ($item->nutrition->protein ?? 0),
+                                'carbs' => (float) ($item->nutrition->carbs ?? 0),
+                                'fat' => (float) ($item->nutrition->fat ?? 0),
+                                'quantity' => $item->quantity,
+                            ];
+                        })->values()->toArray(),
+                    ];
+                })
+                ->values()
+                ->toArray();
 
                 $totalDaily = [
                     'calories' => (int) $oldPlan->daily_calories,
@@ -267,41 +341,52 @@ class AIController extends Controller
 
                 $currentPlanData = [
                     'plan_id' => $oldPlan->id,
-                    'version' => $oldPlan->id, //
+                    'version' => (string) $oldPlan->id,
                     'daily_meals' => $dailyMeals,
                     'total_daily' => $totalDaily,
                 ];
+
                 $userSummary = $this->prepareUserSummary($id);
+
                 $response = Http::post("{$this->pythonApiUrl}/modify-nutrition-plan", [
-                    'current_plan_id' => $currentPlanId,
+                    'current_plan_id' => (string) $currentPlanId,
                     'current_plan' => $currentPlanData,
                     'user_summary' => $userSummary,
                     'adjustments' => [],
-                    'user_feedback' => $userFeedback
+                    'user_feedback' => $userFeedback,
                 ]);
+
+                if (!$response->successful()) {
+                    return response()->json([
+                        'data' => $response->json()
+                    ], $response->status());
+                }
+
                 $suggestions = $response->json();
+
                 $modRequest = ModificationRequest::create([
                     'user_id' => $id,
-                    'program_version_id' => $oldPlan->id,
+                    'program_version_id' => null,
+                    'type' => 'nutrition',
+                    'status' => 'pending',
                     'changes_summary' => $suggestions['changes_summary'] ?? [],
                     'modified_plan' => $suggestions['modified_plan'] ?? [],
                     'recommendations' => $suggestions['recommendations'] ?? [],
                     'user_feedback' => $userFeedback,
-                    'source' => 'ai',
+                    'source' => 'modification',
                     'source_id' => null,
                 ]);
-                $suggestions = $response->json();
+
                 return response()->json([
                     'data' => $suggestions,
                     'modification_request_id' => $modRequest->id
-                ], $response->status());
+                ], 200);
 
             } catch (\Exception $e) {
                 Log::error('Modify Nutrition Plan Error: ' . $e->getMessage());
                 return response()->json(['error' => $e->getMessage()], 500);
             }
         });
-
     }
 
     public function analyzeProgress(Request $request)
@@ -334,11 +419,23 @@ class AIController extends Controller
 
     private function prepareUserSummary($id)
     {
-        $user = User::with(['Profile', 'goals', 'injuriesActive'])->find($id);
+        $user = User::with([
+            'Profile',
+            'goals',
+            'injuriesActive',
+            'likedFoods',
+            'dislikedFoods'
+        ])->findOrFail($id);
+
+        $goalRecord = $user->goals instanceof \Illuminate\Support\Collection
+            ? $user->goals->first()
+            : $user->goals;
+
         return [
             'user_id' => $user->id,
             'level' => $user->Profile->activity_level ?? 'beginner',
-            'goal' => $user->goals->type ?? 'muscle_gain',
+            'goal' => optional($goalRecord)->goal_type ?? 'muscle_gain',
+            'target_weight' => optional($goalRecord)->target_weight ?? null,
             'training_age_years' => $user->age ?? 25,
             'injuries' => $user->injuriesActive->pluck('injury_type')->values()->toArray(),
             'weak_points' => [],
@@ -348,6 +445,11 @@ class AIController extends Controller
             'weight' => $user->Profile->weight ?? null,
             'height' => $user->Profile->height ?? null,
             'age' => $user->age ?? null,
+            'food_allergies' => $user->Profile->food_allergies ?? null,
+            'medical_conditions' => $user->Profile->medical_conditions ?? null,
+            'preferences' => $user->Profile->preferences ?? null,
+            'liked_foods' => $user->likedFoods->pluck('name')->values()->toArray(),
+            'disliked_foods' => $user->dislikedFoods->pluck('name')->values()->toArray(),
         ];
     }
 
@@ -420,12 +522,14 @@ class AIController extends Controller
 
             $Nutrition = [];
             foreach ($planData['daily_meals'] as $meal) {
+                $mealType = $meal['meal'] === 'snacks' ? 'snack' : $meal['meal'];
+
                 foreach ($meal['items'] as $item) {
                     $Nutrition[] = [
                         'nutrition_version_id' => $programNutrition->id,
                         'nutrition_id' => $item['food_id'],
                         'quantity' => $item['quantity'],
-                        'meal_type' => $meal['meal'],
+                        'meal_type' => $mealType,
                     ];
                 }
             }

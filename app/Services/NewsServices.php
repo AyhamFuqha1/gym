@@ -48,8 +48,13 @@ class NewsServices
 
     public function destroy($id)
     {
-        $new = News::findOrFail($id);
-        return $new->update(['status' => 'deleted']);
+        $news = News::findOrFail($id);
+
+        if ($news->status === 'deleted') {
+            return $news->delete();
+        }
+
+        return $news->update(['status' => 'deleted']);
     }
 
     public function update($id, array $data)

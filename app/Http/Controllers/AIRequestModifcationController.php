@@ -52,4 +52,21 @@ class AIRequestModifcationController extends Controller
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
     }
+
+    public function approveFinalTraining(Request $request, $id)
+    {
+        try {
+            $this->aiRequestModificationService->approveFinalTraining($request, $id);
+            return response()->json([
+                'success' => true,
+                'message' => 'Training plan approved and saved successfully'
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
 }

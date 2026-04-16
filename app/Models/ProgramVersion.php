@@ -35,9 +35,9 @@ class ProgramVersion extends Model
         return $this->hasMany(InjuryProgramAdjustments::class, 'program_version_id');
     }
 
-    public function userPrograms()
+    public function userProgram()
     {
-        return $this->hasMany(UserProgram::class, 'program_version_id');
+        return $this->belongsTo(UserProgram::class, 'user_program_id');
     }
 
     public function injury()

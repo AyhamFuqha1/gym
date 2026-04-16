@@ -158,3 +158,6 @@ Route::post('/modification-requests/training/{id}', [AIRequestModifcationControl
 Route::post('/modification-requests/nutrition/{id}', [AIRequestModifcationController::class, 'approveNutrition']);
 
 Route::middleware('auth:sanctum')->apiResource('modification-requests', ModificationRequestController::class);
+
+
+Route::post('/modification-requests/training/{id}/approve-final', [AIRequestModifcationController::class, 'approveFinalTraining']);
