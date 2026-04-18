@@ -19,7 +19,7 @@ class ProgramVersionService
      */
     public function getProgramVersion(int $id): ?ProgramVersion
     {
-        return ProgramVersion::find($id);
+        return ProgramVersion::with(['exercises.exercise'])->find($id);
     }
 
     /**
@@ -27,7 +27,9 @@ class ProgramVersionService
      */
     public function getProgramVersionsByUser(int $userId): \Illuminate\Database\Eloquent\Collection
     {
-        return ProgramVersion::all();
+        return ProgramVersion::with(['exercises.exercise'])
+            ->where('user_id', $userId)
+            ->get();
     }
 
     /**
