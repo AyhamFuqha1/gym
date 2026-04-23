@@ -2,8 +2,10 @@
 
 namespace App\Services;
 
+use App\Jobs\SendNewEmail;
 use App\Models\News;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class NewsServices
 {
@@ -43,7 +45,18 @@ class NewsServices
             $data['expires_at'] = Carbon::parse($data['expires_at'])->format('Y-m-d H:i:s');
         }
 
-        return News::create($data);
+        $emails = $data['emails'] ?? [];
+        unset($data['emails']);
+
+        return DB::transaction(function () use ($data, $emails) {
+            $news = News::create($data);
+
+            foreach ($emails as $email) {
+                SendNewEmail::dispatch($email, $news->title, $news->content);
+            }
+
+            return $news;
+        });
     }
 
     public function destroy($id)
@@ -74,6 +87,8 @@ class NewsServices
         if (!empty($data['expires_at'])) {
             $data['expires_at'] = Carbon::parse($data['expires_at'])->format('Y-m-d H:i:s');
         }
+
+        unset($data['emails']);
 
         $news->update($data);
         $news->load('user');
