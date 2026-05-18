@@ -242,8 +242,10 @@ class AIRequestModifcationService
             $userProgram = null;
             $oldPlan = null;
             $sourceType = 'generated';
+            $sourceId = $modificationRequest->id;
+            $isExistingPlanModification = in_array($modificationRequest->source, ['modification', 'injury'], true);
 
-            if ($modificationRequest->source === 'modification') {
+            if ($isExistingPlanModification) {
                 $oldPlan = ProgramVersion::findOrFail($modificationRequest->program_version_id);
                 $userProgram = $oldPlan->userProgram;
 
@@ -251,7 +253,12 @@ class AIRequestModifcationService
                     throw new \Exception('Old plan is not linked to a user program.');
                 }
 
-                $sourceType = 'coach_edit';
+                if ($modificationRequest->source === 'injury') {
+                    $sourceType = 'injury';
+                    $sourceId = $modificationRequest->source_id;
+                } else {
+                    $sourceType = 'coach_edit';
+                }
             } else {
                 $userProgram = $this->userProgramService->createUserProgram([
                     'user_id' => $userId,
@@ -269,7 +276,7 @@ class AIRequestModifcationService
                 'level' => 'intermediate',
                 'user_program_id' => $userProgram->id,
                 'source_type' => $sourceType,
-                'source_id' => $modificationRequest->id,
+                'source_id' => $sourceId,
                 'is_active' => 'accepted',
             ]);
 

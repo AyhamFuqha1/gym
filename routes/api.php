@@ -4,6 +4,7 @@ use App\Http\Controllers\AdminPlanManagementController;
 use App\Http\Controllers\AIController;
 use App\Http\Controllers\AIRequestModifcationController;
 use App\Http\Controllers\api\AuthController;
+use App\Http\Controllers\CoachSessionController;
 use App\Http\Controllers\DashBoardController;
 use App\Http\Controllers\ExercisesController;
 use App\Http\Controllers\FeedbackController;
@@ -82,6 +83,13 @@ Route::delete('/userInjuries/{id}', [UserInjuriesController::class, 'destroy']);
 
 /* Feedback */
 Route::get('/feedback/dashboard', [FeedbackController::class, 'dashboard']);
+Route::middleware('auth:sanctum')->group(function () {
+    Route::post('/feedback', [FeedbackController::class, 'store']);
+    Route::get('/my-feedback', [FeedbackController::class, 'myFeedback']);
+    Route::get('/feedback/{id}', [FeedbackController::class, 'show'])->whereNumber('id');
+    Route::put('/feedback/{id}', [FeedbackController::class, 'update'])->whereNumber('id');
+    Route::delete('/feedback/{id}', [FeedbackController::class, 'destroy'])->whereNumber('id');
+});
 
 /* News */
 Route::get('/news', [NewsController::class, 'index']);
@@ -161,3 +169,24 @@ Route::middleware('auth:sanctum')->apiResource('modification-requests', Modifica
 
 
 Route::post('/modification-requests/training/{id}/approve-final', [AIRequestModifcationController::class, 'approveFinalTraining']);
+
+/* Coach Sessions */
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/coaches', [CoachSessionController::class, 'getCoaches']);
+
+    Route::post('/coach/session', [CoachSessionController::class, 'store']);
+    Route::get('/coach/session/{id}', [CoachSessionController::class, 'show']);
+    Route::put('/coach/session/{id}', [CoachSessionController::class, 'update']);
+    Route::post('/coach/session/{id}/cancel', [CoachSessionController::class, 'cancelCoachSession']);
+    Route::delete('/coach/session/{id}', [CoachSessionController::class, 'destroy']);
+
+    Route::get('/sessions', [CoachSessionController::class, 'showSessions']);
+    Route::get('/my-sessions', [CoachSessionController::class, 'getMySessions']);
+    Route::post('/sessions/{id}/book', [CoachSessionController::class, 'bookSession']);
+    Route::delete('/sessions/{id}/cancel', [CoachSessionController::class, 'cancelSession']);
+
+    Route::get('/admin/sessions', [CoachSessionController::class, 'getAllSessionsForAdmin']);
+    Route::get('/admin/sessions/{sessionId}', [CoachSessionController::class, 'getSessionDetailsForAdmin']);
+    Route::post('/admin/sessions/{id}/cancel', [CoachSessionController::class, 'adminCancelSession']);
+    Route::post('/admin/sessions/{id}/restore', [CoachSessionController::class, 'adminRestoreSession']);
+});

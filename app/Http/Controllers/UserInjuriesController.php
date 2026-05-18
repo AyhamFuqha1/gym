@@ -30,11 +30,17 @@ class UserInjuriesController extends Controller
     {
         $res = $this->userInjuriesService->store($request->all());
 
-        return response()->json([
+        $response = [
             'success' => true,
             'message' => 'Injuries created successfully',
-            'data' => $res
-        ], 201);
+            'data' => is_array($res) && array_key_exists('injury', $res) ? $res['injury'] : $res
+        ];
+
+        if (is_array($res) && array_key_exists('ai_modification', $res)) {
+            $response['ai_modification'] = $res['ai_modification'];
+        }
+
+        return response()->json($response, 201);
     }
 
     public function show($id)

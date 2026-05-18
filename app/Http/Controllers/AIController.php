@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Models\UserNutritionPlans;
 use App\Models\UserProgram;
 use App\Services\ProgramVersionService;
+use App\Services\TrainingPlanModificationService;
 use App\Services\UserNutritionPlansService;
 use App\Services\UserProgramService;
 use App\Services\NutritionVersionsService;
@@ -26,14 +27,16 @@ class AIController extends Controller
     protected $programVersionService;
     protected $userNutritionPlansService;
     protected $NutritionVersionsService;
+    protected $trainingPlanModificationService;
 
-    public function __construct(UserProgramService $userProgramService, ProgramVersionService $programVersionService, UserNutritionPlansService $userNutritionPlansService, NutritionVersionsService $NutririonVersionService)
+    public function __construct(UserProgramService $userProgramService, ProgramVersionService $programVersionService, UserNutritionPlansService $userNutritionPlansService, NutritionVersionsService $NutririonVersionService, TrainingPlanModificationService $trainingPlanModificationService)
     {
         $this->pythonApiUrl = config('services.python_ai.url', 'http://localhost:8001');
         $this->userProgramService = $userProgramService;
         $this->programVersionService = $programVersionService;
         $this->userNutritionPlansService = $userNutritionPlansService;
         $this->NutritionVersionsService = $NutririonVersionService;
+        $this->trainingPlanModificationService = $trainingPlanModificationService;
     }
 
     public function syncAll(Request $request)
@@ -190,105 +193,25 @@ class AIController extends Controller
 
     public function modifyTrainingPlan(Request $request)
     {
-       $validated = $request->validate([
+        $validated = $request->validate([
             'id' => 'required|exists:users,id',
             'current_plan_id' => 'required',
             'user_feedback' => 'required|array',
         ]);
 
-        $id = $validated['id'];
-        $userSummary = $this->prepareUserSummary($id);
-        $currentPlanId = (string) $validated['current_plan_id'];
-        $userFeedback = $validated['user_feedback'];
+        $result = $this->trainingPlanModificationService->createTrainingModificationRequest(
+            (int) $validated['id'],
+            $validated['current_plan_id'],
+            $validated['user_feedback']
+        );
 
-        $oldPlan = ProgramVersion::findOrFail($currentPlanId);
-
-        $oldExercises = ProgramExercises::where('program_version_id', $oldPlan->id)
-            ->with('exercise')
-            ->get()
-            ->map(function ($item) {
-                return [
-                    'exercise_id' => $item->exercise_id,
-                    'name' => $item->exercise->name ?? null,
-                    'sets' => $item->sets,
-                    'reps' => $item->reps,
-                    'rest_seconds' => $item->rest_seconds,
-                    'muscle_group' => $item->exercise->muscle_group ?? null,
-                    'difficulty' => $item->difficulty ?? 'beginner',
-                    'day' => $item->day_number,
-                ];
-            })
-            ->groupBy('day')
-            ->map(function ($group, $day) {
-                return [
-                    'day' => (int) $day,
-                    'exercises' => array_values($group->toArray()),
-                ];
-            })
-            ->values()
-            ->toArray();
-
-
-            $payload = [
-                'id' => $id,
-                'current_plan_id' => $currentPlanId,
-                'user_summary' => $userSummary,
-                'user_feedback' => $userFeedback,
-                'current_plan' => [
-                    'plan_id' => $oldPlan->id,
-                    'version' => 1,
-                    'plan_data' => [
-                        'schedule' => $oldExercises,
-                    ],
-                ],
-            ];
-
-        $response = Http::timeout(120)->post('http://127.0.0.1:8001/modify-training-plan', $payload);
-
-        if (!$response->successful()) {
-            return response()->json($response->json(), $response->status());
+        if (!($result['success'] ?? false)) {
+            return response()->json($result['response'], $result['status']);
         }
-
-        $data = $response->json();
-
-        if (!is_array($data)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Invalid response returned from AI service.'
-            ], 500);
-        }
-
-        $result = isset($data['data']) && is_array($data['data'])
-            ? $data['data']
-            : $data;
-
-        $modifiedPlan = $result['modified_plan'] ?? null;
-        $recommendations = $result['recommendations'] ?? [];
-        $changesSummary = $result['changes_summary'] ?? [];
-
-        if (!$modifiedPlan || !is_array($modifiedPlan)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'AI did not return a valid modified plan.'
-            ], 500);
-        }
-
-        $modRequest = ModificationRequest::create([
-            'user_id' => $id,
-            'program_version_id' => $oldPlan->id,
-            'type' => 'progress',
-            'status' => 'pending',
-            'changes_summary' => $changesSummary,
-            'modified_plan' => $modifiedPlan,
-            'recommendations' => $recommendations,
-            'user_feedback' => $userFeedback,
-            'source' => 'modification',
-            'source_id' => null,
-        ]);
 
         return response()->json([
-            'data' => $result,
-            'modification_request_id' => $modRequest->id
+            'data' => $result['data'],
+            'modification_request_id' => $result['modification_request']->id
         ], 200);
     }
 
@@ -542,4 +465,3 @@ class AIController extends Controller
     }
 
 }
-
