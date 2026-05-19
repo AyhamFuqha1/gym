@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\ChangePasswordRequest;
 use App\Http\Requests\LoginRequest;
 use App\Http\Requests\RegisterRequest;
 use App\Http\Requests\resetPasswordRequest;
@@ -103,6 +104,33 @@ class AuthController extends Controller
             return response()->json([
                 'message' => $logout['message']
             ], $logout['status']);
+
+        } catch (Throwable $e) {
+            return response()->json([
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString(),
+            ], 500);
+        }
+    }
+
+    public function changePassword(ChangePasswordRequest $request)
+    {
+        try {
+            $user = $request->user();
+
+            if (!$user) {
+                return response()->json([
+                    'message' => 'Unauthorized'
+                ], 401);
+            }
+
+            $result = $this->authService->changePassword($user, $request->validated());
+
+            return response()->json([
+                'message' => $result['message']
+            ], $result['status']);
 
         } catch (Throwable $e) {
             return response()->json([

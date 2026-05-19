@@ -4,6 +4,7 @@ use App\Http\Controllers\AdminPlanManagementController;
 use App\Http\Controllers\AIController;
 use App\Http\Controllers\AIRequestModifcationController;
 use App\Http\Controllers\api\AuthController;
+use App\Http\Controllers\CoachesController;
 use App\Http\Controllers\CoachSessionController;
 use App\Http\Controllers\DashBoardController;
 use App\Http\Controllers\ExercisesController;
@@ -34,6 +35,7 @@ Route::get('/user', function (Request $request) {
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register'])->middleware('auth:sanctum');
 Route::middleware('auth:sanctum')->post('/logout', [AuthController::class, 'logout']);
+Route::middleware('auth:sanctum')->post('/change-password', [AuthController::class, 'changePassword']);
 Route::post('/verify-otp', [AuthController::class, 'verifyOTP']);
 Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
 Route::post('/reset-password', [AuthController::class, 'restetPassword']);
@@ -56,6 +58,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/members/subscription/freeze/{id}', [MembersController::class, 'freezeSubscription']);
     Route::post('/members/subscription/resume/{id}', [MembersController::class, 'resumeSubscription']);
 });
+
+/* Coaches */
+Route::middleware('auth:sanctum')->get('/coaches', [CoachesController::class, 'index']);
 
 /* General Exercises */
 Route::middleware('auth:sanctum')->group(function () {
@@ -172,8 +177,6 @@ Route::post('/modification-requests/training/{id}/approve-final', [AIRequestModi
 
 /* Coach Sessions */
 Route::middleware('auth:sanctum')->group(function () {
-    Route::get('/coaches', [CoachSessionController::class, 'getCoaches']);
-
     Route::post('/coach/session', [CoachSessionController::class, 'store']);
     Route::get('/coach/session/{id}', [CoachSessionController::class, 'show']);
     Route::put('/coach/session/{id}', [CoachSessionController::class, 'update']);

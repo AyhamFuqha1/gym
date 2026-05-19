@@ -50,11 +50,13 @@ class MemberService
 
         $remainingDays = 0;
 
-        if (
+        if ($latestSubscription->status === 'frozen') {
+            $remainingDays = max((int) ($latestSubscription->frozen_remaining_days ?? 0), 0);
+        } elseif (
             $latestSubscription->status === 'active' &&
             Carbon::parse($latestSubscription->end_date)->gt($today)
         ) {
-            $remainingDays = $today->diffInDays(Carbon::parse($latestSubscription->end_date));
+            $remainingDays = (int) $today->diffInDays(Carbon::parse($latestSubscription->end_date)->startOfDay());
         }
 
         User::where('id', $userId)->update([
@@ -89,7 +91,17 @@ class MemberService
             'users.name as user_name',
             'plans.name as plan_name',
             'subscriptions.status',
-            'subscriptions.end_date'
+            'subscriptions.end_date',
+            'subscriptions.frozen_at',
+            'subscriptions.resumed_at',
+            'subscriptions.frozen_remaining_days',
+            DB::raw("
+                CASE
+                    WHEN subscriptions.status = 'frozen' THEN COALESCE(subscriptions.frozen_remaining_days, 0)
+                    WHEN subscriptions.status = 'active' AND subscriptions.end_date > CURDATE() THEN DATEDIFF(subscriptions.end_date, CURDATE())
+                    ELSE 0
+                END as remaining_days
+            ")
         )->get();
 
         $stats = [
@@ -128,7 +140,7 @@ class MemberService
 
         return User::where('role_id', 4)
             ->where('id', $id)
-            ->with('subscription')
+            ->with('subscription.plan')
             ->get();
     }
 
@@ -139,13 +151,18 @@ class MemberService
 
             $plan = Plan::findOrFail($data->plan_id);
 
-            $existingActiveSubscription = Subscription::where('user_id', $data->user_id)
-                ->where('status', 'active')
-                ->whereDate('end_date', '>=', now()->toDateString())
+            $latestSubscription = Subscription::where('user_id', $data->user_id)
                 ->latest('id')
                 ->first();
 
-            if ($existingActiveSubscription) {
+            if ($latestSubscription?->status === 'frozen') {
+                throw new \Exception('This member has a frozen subscription. Please resume or cancel it before renewing.');
+            }
+
+            if (
+                $latestSubscription?->status === 'active' &&
+                Carbon::parse($latestSubscription->end_date)->gt(Carbon::today())
+            ) {
                 throw new \Exception('This member already has an active subscription.');
             }
 
@@ -200,17 +217,47 @@ class MemberService
                 throw new \Exception('Cannot freeze an expired subscription.');
             }
 
+            if ($latestSubscription->status !== 'active') {
+                throw new \Exception('Only active subscriptions can be frozen.');
+            }
+
+            $today = Carbon::today();
+            $endDate = Carbon::parse($latestSubscription->end_date)->startOfDay();
+
+            if ($endDate->lte($today)) {
+                $latestSubscription->update([
+                    'status' => 'expired',
+                ]);
+
+                User::where('id', $id)->update([
+                    'status' => 'expired',
+                    'number_day' => 0,
+                ]);
+
+                throw new \Exception('Cannot freeze an expired subscription.');
+            }
+
+            $remainingDays = (int) $today->diffInDays($endDate);
+
             $latestSubscription->update([
                 'status' => 'frozen',
+                'frozen_at' => now(),
+                'resumed_at' => null,
+                'frozen_remaining_days' => $remainingDays,
             ]);
 
             User::where('id', $id)->update([
                 'status' => 'frozen',
+                'number_day' => $remainingDays,
             ]);
+
+            $latestSubscription->refresh();
 
             return [
                 'success' => true,
                 'message' => 'Subscription frozen successfully',
+                'remaining_days' => $remainingDays,
+                'subscription' => $latestSubscription,
             ];
         });
     }
@@ -228,40 +275,47 @@ class MemberService
                 throw new \Exception('No subscription found for this member.');
             }
 
-            if (Carbon::parse($latestSubscription->end_date)->lte(Carbon::today())) {
-                $latestSubscription->update([
-                    'status' => 'expired',
-                ]);
-
-                User::where('id', $id)->update([
-                    'status' => 'expired',
-                    'number_day' => 0,
-                ]);
-
-                throw new \Exception('Cannot resume an expired subscription. Please renew it.');
+            if ($latestSubscription->status !== 'frozen') {
+                throw new \Exception('Only frozen subscriptions can be resumed.');
             }
+
+            $remainingDays = max((int) ($latestSubscription->frozen_remaining_days ?? 0), 0);
+
+            if ($remainingDays <= 0) {
+                throw new \Exception('Cannot resume a frozen subscription with no remaining days. Please renew it.');
+            }
+
+            $newEndDate = Carbon::today()->addDays($remainingDays);
 
             $latestSubscription->update([
                 'status' => 'active',
+                'resumed_at' => now(),
+                'end_date' => $newEndDate->toDateString(),
             ]);
-
-            $remainingDays = Carbon::today()->diffInDays(Carbon::parse($latestSubscription->end_date));
 
             User::where('id', $id)->update([
                 'status' => 'active',
                 'number_day' => $remainingDays,
             ]);
 
+            $latestSubscription->refresh();
+
             return [
                 'success' => true,
                 'message' => 'Subscription resumed successfully',
+                'remaining_days' => $remainingDays,
+                'new_end_date' => $newEndDate->toDateString(),
+                'subscription' => $latestSubscription,
             ];
         });
     }
 
     public function overview($id)
     {
-        $user = User::with(['Profile', 'goals'])->where('id', $id)->firstOrFail();
+        $this->syncExpiredSubscriptionStatusForUser((int) $id);
+
+        $user = User::with(['Profile', 'goals', 'subscription'])->where('id', $id)->firstOrFail();
+        $subscription = $user->subscription;
 
         return [
             'name' => $user->name,
@@ -272,6 +326,14 @@ class MemberService
             'weight' => $user->Profile->weight ?? null,
             'goal_type' => $user->goals->goal_type ?? null,
             'target_weight' => $user->goals->target_weight ?? null,
+            'subscription_status' => $subscription?->status ?? $user->status,
+            'end_date' => $subscription?->end_date?->toDateString(),
+            'number_day' => $user->number_day ?? 0,
+            'remaining_days' => $subscription?->remaining_days ?? 0,
+            'frozen_remaining_days' => $subscription?->frozen_remaining_days,
+            'frozen_at' => $subscription?->frozen_at,
+            'resumed_at' => $subscription?->resumed_at,
+            'subscription' => $subscription,
         ];
     }
 

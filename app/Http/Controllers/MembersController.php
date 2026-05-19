@@ -99,7 +99,10 @@ class MembersController extends Controller
 
             return response()->json($res, 200);
         } catch (Throwable $e) {
-            $statusCode = $e->getMessage() === 'This member already has an active subscription.'
+            $statusCode = in_array($e->getMessage(), [
+                'This member already has an active subscription.',
+                'This member has a frozen subscription. Please resume or cancel it before renewing.',
+            ], true)
                 ? 409
                 : 500;
 

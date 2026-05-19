@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\Subscription;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Console\Command;
 
 class CloseExpiredSubscriptions extends Command
@@ -27,15 +28,48 @@ class CloseExpiredSubscriptions extends Command
      */
     public function handle()
     {
-        User::where('status', 'active')
-            ->decrement("number_date", 1);
-        $count = User::where("number_day", "<=", 0)
-            ->where("status", "!=", "expired")
-            ->update(["status" => "expired"]);
+        $today = Carbon::today();
 
-       
-        User::where("number_day", ">", 0)
-            ->where("status", "expired")
-            ->update(["status" => "active"]);
+        $expiredCount = Subscription::where('status', 'active')
+            ->whereDate('end_date', '<=', $today->toDateString())
+            ->update(['status' => 'expired']);
+
+        $userIds = Subscription::distinct()->pluck('user_id');
+
+        foreach ($userIds as $userId) {
+            $latestSubscription = Subscription::where('user_id', $userId)
+                ->latest('id')
+                ->first();
+
+            if (!$latestSubscription) {
+                continue;
+            }
+
+            $userStatus = match ($latestSubscription->status) {
+                'active' => 'active',
+                'frozen' => 'frozen',
+                'expired' => 'expired',
+                'cancelled' => 'cancelled',
+                default => 'expired',
+            };
+
+            $remainingDays = 0;
+
+            if ($latestSubscription->status === 'frozen') {
+                $remainingDays = max((int) ($latestSubscription->frozen_remaining_days ?? 0), 0);
+            } elseif (
+                $latestSubscription->status === 'active' &&
+                Carbon::parse($latestSubscription->end_date)->gt($today)
+            ) {
+                $remainingDays = (int) $today->diffInDays(Carbon::parse($latestSubscription->end_date)->startOfDay());
+            }
+
+            User::where('id', $userId)->update([
+                'status' => $userStatus,
+                'number_day' => $remainingDays,
+            ]);
+        }
+
+        $this->info("Expired {$expiredCount} active subscription(s).");
     }
 }

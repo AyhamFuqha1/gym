@@ -105,6 +105,25 @@ class AuthService
         ];
     }
 
+    public function changePassword($user, array $data)
+    {
+        if (!Hash::check($data['current_password'], $user->password)) {
+            return [
+                'status' => 422,
+                'message' => 'Current password is incorrect.'
+            ];
+        }
+
+        $user->password = Hash::make($data['password']);
+        $user->save();
+        $user->currentAccessToken()->delete();
+
+        return [
+            'status' => 200,
+            'message' => 'Password changed successfully. Please login again.'
+        ];
+    }
+
     /*public function forgotPassword($email)
     {
         $OTP = random_int(10000000, 99999999);
