@@ -119,4 +119,9 @@ class User extends Authenticatable
     {
         return $this->belongsTo(Role::class, 'role_id');
     }
+
+    public function pushTokens()
+    {
+        return $this->hasMany(PushTokens::class, 'user_id');
+    }
 }

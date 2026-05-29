@@ -18,6 +18,7 @@ use App\Http\Controllers\NutritionVersionsController;
 use App\Http\Controllers\PlanController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProgramVersionController;
+use App\Http\Controllers\PushTokensController;
 use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\UserGoalController;
 use App\Http\Controllers\UserInjuriesController;
@@ -177,6 +178,8 @@ Route::post('/modification-requests/training/{id}/approve-final', [AIRequestModi
 
 /* Coach Sessions */
 Route::middleware('auth:sanctum')->group(function () {
+    Route::post('/save-token', [PushTokensController::class, 'store']);
+
     Route::post('/coach/session', [CoachSessionController::class, 'store']);
     Route::get('/coach/session/{id}', [CoachSessionController::class, 'show']);
     Route::put('/coach/session/{id}', [CoachSessionController::class, 'update']);
