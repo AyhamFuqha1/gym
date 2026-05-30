@@ -13,6 +13,7 @@ use App\Http\Controllers\GeneralExercisesController;
 use App\Http\Controllers\MembersController;
 use App\Http\Controllers\ModificationRequestController;
 use App\Http\Controllers\NewsController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\NutritionFoodItemsController;
 use App\Http\Controllers\NutritionVersionsController;
 use App\Http\Controllers\PlanController;
@@ -40,6 +41,13 @@ Route::middleware('auth:sanctum')->post('/change-password', [AuthController::cla
 Route::post('/verify-otp', [AuthController::class, 'verifyOTP']);
 Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
 Route::post('/reset-password', [AuthController::class, 'restetPassword']);
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/notifications', [NotificationController::class, 'index']);
+    Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount']);
+    Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead'])->whereNumber('id');
+    Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
+});
 
 /* Profile */
 Route::get('/profile/user/{userId}', [ProfileController::class, 'showByUserId']);
