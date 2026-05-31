@@ -30,19 +30,21 @@ use App\Http\Controllers\FoodController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
+$memberProtectedMiddleware = ['auth:sanctum', 'check.sub'];
+
 Route::get('/user', function (Request $request) {
     return $request->user();
-})->middleware('auth:sanctum');
+})->middleware($memberProtectedMiddleware);
 
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register'])->middleware('auth:sanctum');
 Route::middleware('auth:sanctum')->post('/logout', [AuthController::class, 'logout']);
-Route::middleware('auth:sanctum')->post('/change-password', [AuthController::class, 'changePassword']);
+Route::middleware($memberProtectedMiddleware)->post('/change-password', [AuthController::class, 'changePassword']);
 Route::post('/verify-otp', [AuthController::class, 'verifyOTP']);
 Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
 Route::post('/reset-password', [AuthController::class, 'restetPassword']);
 
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware($memberProtectedMiddleware)->group(function () {
     Route::get('/notifications', [NotificationController::class, 'index']);
     Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount']);
     Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead'])->whereNumber('id');
@@ -61,7 +63,7 @@ Route::get('/members/{id}', [MembersController::class, 'show']);
 Route::get('/members/overView/{id}', [MembersController::class, 'overview']);
 Route::get('/members/nutrition/{id}', [MembersController::class, 'nutrition']);
 
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware($memberProtectedMiddleware)->group(function () {
     Route::post('/members', [MembersController::class, 'store']);
     Route::post('/members/ReNewSubscription', [MembersController::class, 'reNewSubscription']);
     Route::post('/members/subscription/freeze/{id}', [MembersController::class, 'freezeSubscription']);
@@ -69,10 +71,10 @@ Route::middleware('auth:sanctum')->group(function () {
 });
 
 /* Coaches */
-Route::middleware('auth:sanctum')->get('/coaches', [CoachesController::class, 'index']);
+Route::middleware($memberProtectedMiddleware)->get('/coaches', [CoachesController::class, 'index']);
 
 /* General Exercises */
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware($memberProtectedMiddleware)->group(function () {
     Route::get('/generalExercise', [GeneralExercisesController::class, 'index']);
 });
 Route::post('/generalExercise', [GeneralExercisesController::class, 'store']);
@@ -97,7 +99,7 @@ Route::delete('/userInjuries/{id}', [UserInjuriesController::class, 'destroy']);
 
 /* Feedback */
 Route::get('/feedback/dashboard', [FeedbackController::class, 'dashboard']);
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware($memberProtectedMiddleware)->group(function () {
     Route::post('/feedback', [FeedbackController::class, 'store']);
     Route::get('/my-feedback', [FeedbackController::class, 'myFeedback']);
     Route::get('/feedback/{id}', [FeedbackController::class, 'show'])->whereNumber('id');
@@ -135,8 +137,8 @@ Route::apiResource('foods', FoodController::class);
 Route::get('/general-nutrition', [GeneralNutritionController::class, 'index']);
 
 /* Dashboard + User Goals */
-Route::middleware('auth:sanctum')->get('/dashboard', [DashBoardController::class, 'dashboard']);
-Route::middleware('auth:sanctum')->apiResource('user-goals', UserGoalController::class);
+Route::middleware($memberProtectedMiddleware)->get('/dashboard', [DashBoardController::class, 'dashboard']);
+Route::middleware($memberProtectedMiddleware)->apiResource('user-goals', UserGoalController::class);
 
 /* AI + extra APIs from Ayham */
 Route::post('/ai/generate', [AIController::class, 'generateProgram']);////////////////////////
@@ -151,23 +153,23 @@ Route::post('/modify-nutrition-plan', [AIController::class, 'modifyNutritionPlan
 Route::post('/analyze-progress', [AIController::class, 'analyzeProgress']);
 
 /* User Programs */
-Route::middleware('auth:sanctum')->apiResource('user-programs', UserProgramController::class);
+Route::middleware($memberProtectedMiddleware)->apiResource('user-programs', UserProgramController::class);
 
 /* Program Versions */
-Route::middleware('auth:sanctum')->apiResource('program-versions', ProgramVersionController::class);
+Route::middleware($memberProtectedMiddleware)->apiResource('program-versions', ProgramVersionController::class);
 
 /* User Nutrition Plans */
-Route::middleware('auth:sanctum')->apiResource('user-nutrition-plans', UserNutritionPlansController::class);
+Route::middleware($memberProtectedMiddleware)->apiResource('user-nutrition-plans', UserNutritionPlansController::class);
 
 /* Nutrition Versions */
-Route::middleware('auth:sanctum')->apiResource('nutrition-versions', NutritionVersionsController::class);
+Route::middleware($memberProtectedMiddleware)->apiResource('nutrition-versions', NutritionVersionsController::class);
 
 /* Nutrition Food Items */
-Route::middleware('auth:sanctum')->apiResource('nutrition-food-items', NutritionFoodItemsController::class);
+Route::middleware($memberProtectedMiddleware)->apiResource('nutrition-food-items', NutritionFoodItemsController::class);
 
 
 /* Pending Plans */
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware($memberProtectedMiddleware)->group(function () {
     Route::get('/PendingTrainingPlans', [AdminPlanManagementController::class, 'getPendingTrainingPlans']);
     Route::post('/PendingTrainingPlans', [AdminPlanManagementController::class, 'saveEditedTrainingPlan']);
     Route::get('/PendingNutritionPlans', [AdminPlanManagementController::class, 'getPendingNutritionPlans']);
@@ -179,13 +181,13 @@ Route::get('/modification-requests/nutrition', [AIRequestModifcationController::
 Route::post('/modification-requests/training/{id}', [AIRequestModifcationController::class, 'approveTraining']);
 Route::post('/modification-requests/nutrition/{id}', [AIRequestModifcationController::class, 'approveNutrition']);
 
-Route::middleware('auth:sanctum')->apiResource('modification-requests', ModificationRequestController::class);
+Route::middleware($memberProtectedMiddleware)->apiResource('modification-requests', ModificationRequestController::class);
 
 
 Route::post('/modification-requests/training/{id}/approve-final', [AIRequestModifcationController::class, 'approveFinalTraining']);
 
 /* Coach Sessions */
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware($memberProtectedMiddleware)->group(function () {
     Route::post('/save-token', [PushTokensController::class, 'store']);
 
     Route::post('/coach/session', [CoachSessionController::class, 'store']);

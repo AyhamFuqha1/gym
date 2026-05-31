@@ -25,9 +25,6 @@ class SendPushNotificationJob implements ShouldQueue
         $notification = Notification::find($this->notificationId);
 
         if (!$notification || !$notification->recipient_user_id) {
-            Log::info('Push notification job skipped because notification or recipient is missing.', [
-                'notification_id' => $this->notificationId,
-            ]);
             return;
         }
 
@@ -37,10 +34,6 @@ class SendPushNotificationJob implements ShouldQueue
             ->get();
 
         if ($tokens->isEmpty()) {
-            Log::info('Push notification job found no active push tokens.', [
-                'notification_id' => $notification->id,
-                'recipient_user_id' => $notification->recipient_user_id,
-            ]);
             return;
         }
 
@@ -49,15 +42,6 @@ class SendPushNotificationJob implements ShouldQueue
         foreach ($tokens as $token) {
             try {
                 $attempted = true;
-
-                Log::info('Push notification job sending to active token.', [
-                    'notification_id' => $notification->id,
-                    'recipient_user_id' => $notification->recipient_user_id,
-                    'push_token_id' => $token->id,
-                    'provider' => $token->provider,
-                    'platform' => $token->platform,
-                    'token' => ExpoNotificationService::maskToken($token->token),
-                ]);
 
                 $response = $expoNotificationService->sendToToken(
                     $token->token,
@@ -68,18 +52,6 @@ class SendPushNotificationJob implements ShouldQueue
 
                 $responsePayload = $response->json();
                 $expoErrorCodes = $this->expoErrorCodes($responsePayload);
-
-                Log::info('Push notification job received Expo response.', [
-                    'notification_id' => $notification->id,
-                    'recipient_user_id' => $notification->recipient_user_id,
-                    'push_token_id' => $token->id,
-                    'token' => ExpoNotificationService::maskToken($token->token),
-                    'http_status' => $response->status(),
-                    'successful_http' => $response->successful(),
-                    'expo_status' => $this->expoStatus($responsePayload),
-                    'expo_error_codes' => $expoErrorCodes,
-                    'response' => $responsePayload,
-                ]);
 
                 if ($this->isInvalidTokenResponse($responsePayload)) {
                     $token->update([
@@ -104,7 +76,6 @@ class SendPushNotificationJob implements ShouldQueue
                         'successful_http' => $response->successful(),
                         'expo_status' => $this->expoStatus($responsePayload),
                         'expo_error_codes' => $expoErrorCodes,
-                        'response' => $responsePayload,
                     ]);
                 }
             } catch (\Throwable $e) {
@@ -120,10 +91,6 @@ class SendPushNotificationJob implements ShouldQueue
         if ($attempted) {
             $notification->update([
                 'sent_at' => now(),
-            ]);
-
-            Log::info('Push notification job marked notification sent_at after send attempt.', [
-                'notification_id' => $notification->id,
             ]);
         }
     }

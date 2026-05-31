@@ -7,10 +7,13 @@ use App\Jobs\SendOTPJob;
 use App\Models\User;
 use DB;
 use Hash;
-use Log;
 
 class AuthService
 {
+    public function __construct(private MemberService $memberService)
+    {
+        //
+    }
 
     public function login($data)
     {
@@ -21,6 +24,20 @@ class AuthService
                 return [
                     "message" => "Email or password is incorrect",
                     "status" => 401
+                ];
+            }
+
+            $subscriptionAccess = $this->memberService->ensureMemberSubscriptionAccess($user);
+
+            if (!($subscriptionAccess['allowed'] ?? false)) {
+                return [
+                    "message" => $subscriptionAccess['message'],
+                    "status" => $subscriptionAccess['status'] ?? 403,
+                    "code" => $subscriptionAccess['code'] ?? 'subscription_required',
+                    "title" => $subscriptionAccess['title'] ?? 'Subscription Required',
+                    "subscription_status" => $subscriptionAccess['subscription_status'] ?? null,
+                    "subscription_id" => $subscriptionAccess['subscription_id'] ?? null,
+                    "renew_required" => $subscriptionAccess['renew_required'] ?? true,
                 ];
             }
 
@@ -123,22 +140,6 @@ class AuthService
             'message' => 'Password changed successfully. Please login again.'
         ];
     }
-
-    /*public function forgotPassword($email)
-    {
-        $OTP = random_int(10000000, 99999999);
-        $user = DB::table("users")->where("email", $email)->first();
-        Log::info($email);
-        if (!$user) { 
-            return false;
-        } else {
-            DB::table("password_reset_tokens")->insert(["email"=>$email,"token"=>$OTP]);
-            SendOTPJob::dispatch($email, $user->name, $OTP);
-            return true;
-        }
-
-    }*/
-
 
     public function forgotPassword($email)
     {

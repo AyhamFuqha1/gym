@@ -10,9 +10,18 @@ use App\Models\User;
 use Carbon\Carbon;
 use DB;
 use Hash;
+use Illuminate\Support\Facades\Log;
 
 class MemberService
 {
+    private const SUBSCRIPTION_REQUIRED_TITLE = 'Subscription Required';
+    private const SUBSCRIPTION_REQUIRED_MESSAGE = 'Your subscription is not active. Please renew your subscription to continue.';
+
+    public function __construct(private NotificationService $notificationService)
+    {
+        //
+    }
+
     private function syncExpiredSubscriptionStatusForUser(int $userId): void
     {
         $latestSubscription = Subscription::where('user_id', $userId)
@@ -192,6 +201,8 @@ class MemberService
                 'number_day' => $plan->duration_days,
             ]);
 
+            $this->notifySubscriptionRenewed($createdSubscription);
+
             return [
                 'success' => true,
                 'message' => 'Subscription renewed successfully',
@@ -253,6 +264,8 @@ class MemberService
 
             $latestSubscription->refresh();
 
+            $this->notifySubscriptionFrozen($latestSubscription);
+
             return [
                 'success' => true,
                 'message' => 'Subscription frozen successfully',
@@ -285,28 +298,99 @@ class MemberService
                 throw new \Exception('Cannot resume a frozen subscription with no remaining days. Please renew it.');
             }
 
-            $newEndDate = Carbon::today()->addDays($remainingDays);
-
-            $latestSubscription->update([
-                'status' => 'active',
-                'resumed_at' => now(),
-                'end_date' => $newEndDate->toDateString(),
-            ]);
-
-            User::where('id', $id)->update([
-                'status' => 'active',
-                'number_day' => $remainingDays,
-            ]);
-
-            $latestSubscription->refresh();
+            $result = $this->resumeFrozenSubscription($latestSubscription);
 
             return [
                 'success' => true,
                 'message' => 'Subscription resumed successfully',
-                'remaining_days' => $remainingDays,
-                'new_end_date' => $newEndDate->toDateString(),
-                'subscription' => $latestSubscription,
+                'remaining_days' => $result['remaining_days'],
+                'new_end_date' => $result['new_end_date'],
+                'subscription' => $result['subscription'],
             ];
+        });
+    }
+
+    public function ensureMemberSubscriptionAccess(User $user): array
+    {
+        if ((int) $user->role_id !== 4) {
+            return [
+                'allowed' => true,
+                'auto_resumed' => false,
+                'subscription' => null,
+            ];
+        }
+
+        return DB::transaction(function () use ($user) {
+            $subscription = Subscription::where('user_id', $user->id)
+                ->latest('id')
+                ->lockForUpdate()
+                ->first();
+
+            if (!$subscription) {
+                User::where('id', $user->id)->update([
+                    'status' => 'expired',
+                    'number_day' => 0,
+                ]);
+
+                return $this->subscriptionRequiredResponse(null, 'missing');
+            }
+
+            $today = Carbon::today();
+
+            if (
+                $subscription->status === 'active' &&
+                (!$subscription->end_date || Carbon::parse($subscription->end_date)->startOfDay()->lte($today))
+            ) {
+                $subscription->update(['status' => 'expired']);
+                $subscription->refresh();
+            }
+
+            if ($subscription->status === 'frozen') {
+                $remainingDays = max((int) ($subscription->frozen_remaining_days ?? 0), 0);
+
+                if ($remainingDays <= 0) {
+                    User::where('id', $user->id)->update([
+                        'status' => 'frozen',
+                        'number_day' => 0,
+                    ]);
+
+                    return $this->subscriptionRequiredResponse($subscription, 'frozen_no_remaining_days');
+                }
+
+                $result = $this->resumeFrozenSubscription(
+                    $subscription,
+                    'Your subscription was frozen and has now been reactivated because you opened the app.',
+                    "subscription_resumed:auto:{$subscription->id}:{$user->id}"
+                );
+
+                return [
+                    'allowed' => true,
+                    'auto_resumed' => true,
+                    'subscription' => $result['subscription'],
+                ];
+            }
+
+            if ($subscription->status === 'active') {
+                $remainingDays = $subscription->remaining_days;
+
+                User::where('id', $user->id)->update([
+                    'status' => 'active',
+                    'number_day' => $remainingDays,
+                ]);
+
+                return [
+                    'allowed' => true,
+                    'auto_resumed' => false,
+                    'subscription' => $subscription,
+                ];
+            }
+
+            User::where('id', $user->id)->update([
+                'status' => $subscription->status ?: 'expired',
+                'number_day' => 0,
+            ]);
+
+            return $this->subscriptionRequiredResponse($subscription, $subscription->status ?: 'inactive');
         });
     }
 
@@ -359,5 +443,162 @@ class MemberService
     public function delete()
     {
         //
+    }
+
+    private function notifySubscriptionRenewed(Subscription $subscription): void
+    {
+        $endDate = $this->dateForPayload($subscription->end_date);
+        $body = $endDate
+            ? "Your FitMind subscription is active until {$endDate}."
+            : 'Your FitMind subscription has been renewed.';
+
+        $this->notifySubscriptionEvent(
+            $subscription,
+            'subscription_renewed',
+            'Subscription renewed',
+            $body
+        );
+    }
+
+    private function notifySubscriptionFrozen(Subscription $subscription): void
+    {
+        $remainingDays = (int) ($subscription->frozen_remaining_days ?? 0);
+        $body = $remainingDays > 0
+            ? "Your FitMind subscription is frozen with {$remainingDays} day(s) remaining."
+            : 'Your FitMind subscription has been frozen.';
+
+        $this->notifySubscriptionEvent(
+            $subscription,
+            'subscription_frozen',
+            'Subscription frozen',
+            $body
+        );
+    }
+
+    private function resumeFrozenSubscription(
+        Subscription $subscription,
+        ?string $notificationBody = null,
+        ?string $dedupeKey = null
+    ): array {
+        $remainingDays = max((int) ($subscription->frozen_remaining_days ?? 0), 0);
+
+        if ($remainingDays <= 0) {
+            throw new \Exception('Cannot resume a frozen subscription with no remaining days. Please renew it.');
+        }
+
+        $newEndDate = Carbon::today()->addDays($remainingDays);
+
+        $subscription->update([
+            'status' => 'active',
+            'resumed_at' => now(),
+            'end_date' => $newEndDate->toDateString(),
+        ]);
+
+        User::where('id', $subscription->user_id)->update([
+            'status' => 'active',
+            'number_day' => $remainingDays,
+        ]);
+
+        $subscription->refresh();
+
+        $this->notifySubscriptionResumed($subscription, $notificationBody, $dedupeKey);
+
+        return [
+            'remaining_days' => $remainingDays,
+            'new_end_date' => $newEndDate->toDateString(),
+            'subscription' => $subscription,
+        ];
+    }
+
+    private function notifySubscriptionResumed(
+        Subscription $subscription,
+        ?string $body = null,
+        ?string $dedupeKey = null
+    ): void
+    {
+        $endDate = $this->dateForPayload($subscription->end_date);
+        $body = $body ?? ($endDate
+            ? "Your FitMind subscription has resumed and is active until {$endDate}."
+            : 'Your FitMind subscription has resumed.');
+
+        $this->notifySubscriptionEvent(
+            $subscription,
+            'subscription_resumed',
+            'Subscription resumed',
+            $body,
+            $dedupeKey
+        );
+    }
+
+    private function notifySubscriptionEvent(
+        Subscription $subscription,
+        string $type,
+        string $title,
+        string $body,
+        ?string $dedupeKey = null
+    ): void {
+        try {
+            $recipientUserId = (int) $subscription->user_id;
+
+            $this->notificationService->notifyUser($recipientUserId, [
+                'actor_user_id' => auth()->id(),
+                'type' => $type,
+                'title' => $title,
+                'body' => $body,
+                'entity_type' => 'subscription',
+                'entity_id' => $subscription->id,
+                'priority' => 'high',
+                'channels' => ['in_app', 'push'],
+                'data' => array_filter([
+                    'screen' => 'Subscription',
+                    'subscription_id' => $subscription->id,
+                    'type' => $type,
+                    'entity_type' => 'subscription',
+                    'entity_id' => $subscription->id,
+                    'status' => $subscription->status,
+                    'start_date' => $this->dateForPayload($subscription->start_date),
+                    'end_date' => $this->dateForPayload($subscription->end_date),
+                    'plan_id' => $subscription->plan_id,
+                    'remaining_days' => $subscription->remaining_days ?? null,
+                    'frozen_remaining_days' => $subscription->frozen_remaining_days,
+                ], fn ($value) => $value !== null),
+                'dedupe_key' => $dedupeKey ?? "{$type}:{$subscription->id}:{$recipientUserId}",
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('Failed to create subscription notification.', [
+                'subscription_id' => $subscription->id,
+                'recipient_user_id' => $subscription->user_id,
+                'type' => $type,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    private function dateForPayload($date): ?string
+    {
+        if (!$date) {
+            return null;
+        }
+
+        if ($date instanceof \DateTimeInterface) {
+            return $date->format('Y-m-d');
+        }
+
+        return (string) $date;
+    }
+
+    private function subscriptionRequiredResponse(?Subscription $subscription, string $reason): array
+    {
+        return [
+            'allowed' => false,
+            'auto_resumed' => false,
+            'status' => 403,
+            'code' => 'subscription_required',
+            'title' => self::SUBSCRIPTION_REQUIRED_TITLE,
+            'message' => self::SUBSCRIPTION_REQUIRED_MESSAGE,
+            'subscription_status' => $subscription?->status ?? $reason,
+            'subscription_id' => $subscription?->id,
+            'renew_required' => true,
+        ];
     }
 }

@@ -69,7 +69,6 @@ class UserInjuriesService
                     'injury_id' => $injury->id,
                     'user_id' => $injury->user_id,
                     'status' => $result['status'] ?? null,
-                    'response' => $result['response'] ?? null,
                 ]);
             }
         } catch (\Throwable $e) {

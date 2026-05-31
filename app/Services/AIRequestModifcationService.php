@@ -9,6 +9,7 @@ use App\Models\ProgramExercises;
 use App\Models\ProgramVersion;
 use DB;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class AIRequestModifcationService
 {
@@ -18,7 +19,7 @@ class AIRequestModifcationService
     protected $userNutritionPlansService;
     protected $NutritionVersionsService;
 
-    public function __construct(UserProgramService $userProgramService, ProgramVersionService $programVersionService, UserNutritionPlansService $userNutritionPlansService, NutritionVersionsService $NutririonVersionService)
+    public function __construct(UserProgramService $userProgramService, ProgramVersionService $programVersionService, UserNutritionPlansService $userNutritionPlansService, NutritionVersionsService $NutririonVersionService, private NotificationService $notificationService)
     {
         $this->userProgramService = $userProgramService;
         $this->programVersionService = $programVersionService;
@@ -207,6 +208,8 @@ class AIRequestModifcationService
                 'status' => 'done',
             ]);
 
+            $this->notifyNutritionPlanApproved($newVersion, (int) $userId, $modificationRequest->id);
+
             return $newVersion;
         });
     }
@@ -317,8 +320,86 @@ class AIRequestModifcationService
                 'status' => 'done',
             ]);
 
+            $this->notifyTrainingPlanApproved($newPlan, (int) $userId, $modificationRequest->id);
+
             return $newPlan;
         });
+    }
+
+    private function notifyTrainingPlanApproved(
+        ProgramVersion $plan,
+        int $recipientUserId,
+        ?int $modificationRequestId = null
+    ): void {
+        try {
+            $this->notificationService->notifyUser($recipientUserId, [
+                'actor_user_id' => auth()->id(),
+                'type' => 'training_plan_approved',
+                'title' => 'Training plan approved',
+                'body' => 'Your training plan is ready.',
+                'entity_type' => 'program_version',
+                'entity_id' => $plan->id,
+                'priority' => 'high',
+                'channels' => ['in_app', 'push'],
+                'data' => array_filter([
+                    'screen' => 'TrainingPlan',
+                    'program_version_id' => $plan->id,
+                    'training_plan_id' => $plan->id,
+                    'user_program_id' => $plan->user_program_id,
+                    'modification_request_id' => $modificationRequestId,
+                    'type' => 'training_plan_approved',
+                    'entity_type' => 'program_version',
+                    'entity_id' => $plan->id,
+                    'status' => $plan->is_active,
+                    'source_type' => $plan->source_type,
+                    'source_id' => $plan->source_id,
+                ], fn ($value) => $value !== null),
+                'dedupe_key' => "training_plan_approved:{$plan->id}:{$recipientUserId}",
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('Failed to create training plan approved notification.', [
+                'program_version_id' => $plan->id,
+                'recipient_user_id' => $recipientUserId,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    private function notifyNutritionPlanApproved(
+        NutritionVersions $plan,
+        int $recipientUserId,
+        ?int $modificationRequestId = null
+    ): void {
+        try {
+            $this->notificationService->notifyUser($recipientUserId, [
+                'actor_user_id' => auth()->id(),
+                'type' => 'nutrition_plan_approved',
+                'title' => 'Nutrition plan approved',
+                'body' => 'Your nutrition plan is ready.',
+                'entity_type' => 'nutrition_version',
+                'entity_id' => $plan->id,
+                'priority' => 'high',
+                'channels' => ['in_app', 'push'],
+                'data' => array_filter([
+                    'screen' => 'NutritionPlan',
+                    'nutrition_version_id' => $plan->id,
+                    'nutrition_plan_id' => $plan->user_nutrition_plan_id,
+                    'modification_request_id' => $modificationRequestId,
+                    'type' => 'nutrition_plan_approved',
+                    'entity_type' => 'nutrition_version',
+                    'entity_id' => $plan->id,
+                    'status' => $plan->is_active,
+                    'daily_calories' => $plan->daily_calories,
+                ], fn ($value) => $value !== null),
+                'dedupe_key' => "nutrition_plan_approved:{$plan->id}:{$recipientUserId}",
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('Failed to create nutrition plan approved notification.', [
+                'nutrition_version_id' => $plan->id,
+                'recipient_user_id' => $recipientUserId,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
 }

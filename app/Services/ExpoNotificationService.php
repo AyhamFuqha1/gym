@@ -25,13 +25,6 @@ class ExpoNotificationService
             'sound' => 'default',
         ];
 
-        Log::info('Sending Expo push notification.', [
-            'token' => self::maskToken($token),
-            'title' => $title,
-            'body_present' => filled($body),
-            'data_keys' => array_keys($data),
-        ]);
-
         $response = Http::timeout(15)->withHeaders([
             'Accept' => 'application/json',
             'Accept-encoding' => 'gzip, deflate',
@@ -40,18 +33,12 @@ class ExpoNotificationService
 
         $responsePayload = $response->json();
 
-        Log::info('Expo push notification response received.', [
-            'token' => self::maskToken($token),
-            'http_status' => $response->status(),
-            'successful_http' => $response->successful(),
-            'response' => $responsePayload,
-        ]);
-
         if (!$response->successful()) {
             Log::warning('Expo push notification HTTP request was not successful.', [
                 'token' => self::maskToken($token),
                 'http_status' => $response->status(),
-                'response' => $responsePayload,
+                'expo_status' => $this->expoStatus($responsePayload),
+                'expo_error_codes' => $this->expoErrorCodes($responsePayload),
             ]);
         }
 
@@ -71,5 +58,51 @@ class ExpoNotificationService
         }
 
         return substr($token, 0, 14) . '...' . substr($token, -6);
+    }
+
+    private function expoStatus(mixed $payload): ?string
+    {
+        if (!is_array($payload)) {
+            return null;
+        }
+
+        if (is_string($payload['status'] ?? null)) {
+            return $payload['status'];
+        }
+
+        if (is_array($payload['data'] ?? null)) {
+            return $this->expoStatus($payload['data']);
+        }
+
+        return null;
+    }
+
+    private function expoErrorCodes(mixed $payload): array
+    {
+        $codes = [];
+        $this->collectExpoErrorCodes($payload, $codes);
+
+        return array_values(array_unique($codes));
+    }
+
+    private function collectExpoErrorCodes(mixed $payload, array &$codes): void
+    {
+        if (!is_array($payload)) {
+            return;
+        }
+
+        if (is_string($payload['error'] ?? null)) {
+            $codes[] = $payload['error'];
+        }
+
+        if (is_array($payload['details'] ?? null)) {
+            $this->collectExpoErrorCodes($payload['details'], $codes);
+        }
+
+        foreach ($payload as $value) {
+            if (is_array($value)) {
+                $this->collectExpoErrorCodes($value, $codes);
+            }
+        }
     }
 }

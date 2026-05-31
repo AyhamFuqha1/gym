@@ -32,7 +32,14 @@ class AuthController extends Controller
 
             if ($login['status'] !== 200) {
                 return response()->json(
-                    ['message' => $login['message']],
+                    array_filter([
+                        'message' => $login['message'],
+                        'title' => $login['title'] ?? null,
+                        'code' => $login['code'] ?? null,
+                        'subscription_status' => $login['subscription_status'] ?? null,
+                        'subscription_id' => $login['subscription_id'] ?? null,
+                        'renew_required' => $login['renew_required'] ?? null,
+                    ], fn ($value) => $value !== null),
                     $login['status']
                 );
             }
