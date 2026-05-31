@@ -7,3 +7,4 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 Schedule::command('subscriptions:close-expired')->daily();
+Schedule::command('notifications:send-session-reminders')->everyFiveMinutes();

@@ -6,9 +6,15 @@ use App\Jobs\SendNewEmail;
 use App\Models\News;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class NewsServices
 {
+    public function __construct(private NotificationService $notificationService)
+    {
+        //
+    }
+
     public function getPaginatedNews($perPage = 10)
     {
         $paginated = News::with('user')
@@ -35,7 +41,7 @@ class NewsServices
         ];
     }
 
-    public function store($data)
+    public function store($data, ?int $actorUserId = null)
     {
         if (($data['status'] ?? null) === 'public' && empty($data['published_at'])) {
             $data['published_at'] = now();
@@ -48,11 +54,15 @@ class NewsServices
         $emails = $data['emails'] ?? [];
         unset($data['emails']);
 
-        return DB::transaction(function () use ($data, $emails) {
+        return DB::transaction(function () use ($data, $emails, $actorUserId) {
             $news = News::create($data);
 
             foreach ($emails as $email) {
                 SendNewEmail::dispatch($email, $news->title, $news->content);
+            }
+
+            if ($news->status === 'public') {
+                $this->queueNewsPublishedNotifications($news->id, $actorUserId);
             }
 
             return $news;
@@ -70,9 +80,10 @@ class NewsServices
         return $news->update(['status' => 'deleted']);
     }
 
-    public function update($id, array $data)
+    public function update($id, array $data, ?int $actorUserId = null)
     {
         $news = News::findOrFail($id);
+        $oldStatus = $news->status;
 
         $newStatus = $data['status'] ?? null;
 
@@ -92,6 +103,10 @@ class NewsServices
 
         $news->update($data);
         $news->load('user');
+
+        if ($oldStatus !== 'public' && $news->status === 'public') {
+            $this->queueNewsPublishedNotifications($news->id, $actorUserId);
+        }
 
         return $this->formatNews($news);
     }
@@ -144,5 +159,56 @@ class NewsServices
         });
 
         return $paginated;
+    }
+
+    private function queueNewsPublishedNotifications(int $newsId, ?int $actorUserId = null): void
+    {
+        DB::afterCommit(function () use ($newsId, $actorUserId) {
+            try {
+                $news = News::find($newsId);
+
+                if (!$news || $news->status !== 'public') {
+                    return;
+                }
+
+                foreach ($this->notificationService->eligibleMemberUserIds() as $recipientUserId) {
+                    $this->notifyNewsPublished($news, $recipientUserId, $actorUserId);
+                }
+            } catch (\Throwable $e) {
+                Log::warning('Failed to create news published notifications.', [
+                    'news_id' => $newsId,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        });
+    }
+
+    private function notifyNewsPublished(News $news, int $recipientUserId, ?int $actorUserId = null): void
+    {
+        try {
+            $this->notificationService->notifyUser($recipientUserId, [
+                'actor_user_id' => $actorUserId,
+                'type' => 'news_published',
+                'title' => 'New FitMind news',
+                'body' => $news->title,
+                'entity_type' => 'news',
+                'entity_id' => $news->id,
+                'priority' => 'normal',
+                'channels' => ['in_app', 'push'],
+                'data' => [
+                    'news_id' => $news->id,
+                    'title' => $news->title,
+                    'status' => $news->status,
+                    'screen' => 'NewsDetails',
+                ],
+                'dedupe_key' => "news_published:{$news->id}:{$recipientUserId}",
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('Failed to create news notification for recipient.', [
+                'news_id' => $news->id,
+                'recipient_user_id' => $recipientUserId,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 }

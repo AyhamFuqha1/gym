@@ -3,8 +3,11 @@
 namespace App\Services;
 
 use App\Jobs\SendPushNotificationJob;
+use App\Models\Booking;
 use App\Models\Notification;
+use App\Models\Subscription;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
@@ -77,6 +80,36 @@ class NotificationService
             ->all();
 
         return $this->notifyUsers($recipientUserIds, $payload);
+    }
+
+    public function eligibleMemberUserIds(): array
+    {
+        $latestSubscriptionIds = Subscription::query()
+            ->selectRaw('MAX(id)')
+            ->groupBy('user_id');
+
+        return Subscription::query()
+            ->whereIn('id', $latestSubscriptionIds)
+            ->where('status', 'active')
+            ->whereDate('end_date', '>', Carbon::today()->toDateString())
+            ->whereHas('user', function (Builder $query) {
+                $query->where('role_id', 4);
+            })
+            ->pluck('user_id')
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    public function bookedSessionUserIds(int $sessionId): array
+    {
+        return Booking::query()
+            ->where('session_id', $sessionId)
+            ->whereIn('status', ['booked', 'confirmed', 'active'])
+            ->pluck('user_id')
+            ->unique()
+            ->values()
+            ->all();
     }
 
     public function markAsRead(int $notificationId, int $userId): Notification

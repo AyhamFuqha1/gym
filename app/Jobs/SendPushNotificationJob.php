@@ -25,6 +25,9 @@ class SendPushNotificationJob implements ShouldQueue
         $notification = Notification::find($this->notificationId);
 
         if (!$notification || !$notification->recipient_user_id) {
+            Log::info('Push notification job skipped because notification or recipient is missing.', [
+                'notification_id' => $this->notificationId,
+            ]);
             return;
         }
 
@@ -34,6 +37,10 @@ class SendPushNotificationJob implements ShouldQueue
             ->get();
 
         if ($tokens->isEmpty()) {
+            Log::info('Push notification job found no active push tokens.', [
+                'notification_id' => $notification->id,
+                'recipient_user_id' => $notification->recipient_user_id,
+            ]);
             return;
         }
 
@@ -43,6 +50,15 @@ class SendPushNotificationJob implements ShouldQueue
             try {
                 $attempted = true;
 
+                Log::info('Push notification job sending to active token.', [
+                    'notification_id' => $notification->id,
+                    'recipient_user_id' => $notification->recipient_user_id,
+                    'push_token_id' => $token->id,
+                    'provider' => $token->provider,
+                    'platform' => $token->platform,
+                    'token' => ExpoNotificationService::maskToken($token->token),
+                ]);
+
                 $response = $expoNotificationService->sendToToken(
                     $token->token,
                     $notification->title,
@@ -51,19 +67,43 @@ class SendPushNotificationJob implements ShouldQueue
                 );
 
                 $responsePayload = $response->json();
+                $expoErrorCodes = $this->expoErrorCodes($responsePayload);
+
+                Log::info('Push notification job received Expo response.', [
+                    'notification_id' => $notification->id,
+                    'recipient_user_id' => $notification->recipient_user_id,
+                    'push_token_id' => $token->id,
+                    'token' => ExpoNotificationService::maskToken($token->token),
+                    'http_status' => $response->status(),
+                    'successful_http' => $response->successful(),
+                    'expo_status' => $this->expoStatus($responsePayload),
+                    'expo_error_codes' => $expoErrorCodes,
+                    'response' => $responsePayload,
+                ]);
 
                 if ($this->isInvalidTokenResponse($responsePayload)) {
                     $token->update([
                         'is_active' => false,
                         'revoked_at' => now(),
                     ]);
-                }
 
-                if (!$response->successful()) {
-                    Log::warning('Expo push request failed.', [
+                    Log::warning('Push token deactivated because Expo reported it invalid.', [
                         'notification_id' => $notification->id,
                         'push_token_id' => $token->id,
-                        'status' => $response->status(),
+                        'token' => ExpoNotificationService::maskToken($token->token),
+                        'expo_error_codes' => $expoErrorCodes,
+                    ]);
+                }
+
+                if (!$response->successful() || $this->hasExpoErrorResponse($responsePayload)) {
+                    Log::warning('Expo push request returned an error response.', [
+                        'notification_id' => $notification->id,
+                        'push_token_id' => $token->id,
+                        'token' => ExpoNotificationService::maskToken($token->token),
+                        'http_status' => $response->status(),
+                        'successful_http' => $response->successful(),
+                        'expo_status' => $this->expoStatus($responsePayload),
+                        'expo_error_codes' => $expoErrorCodes,
                         'response' => $responsePayload,
                     ]);
                 }
@@ -71,6 +111,7 @@ class SendPushNotificationJob implements ShouldQueue
                 Log::warning('Push notification send failed.', [
                     'notification_id' => $notification->id,
                     'push_token_id' => $token->id,
+                    'token' => ExpoNotificationService::maskToken($token->token),
                     'error' => $e->getMessage(),
                 ]);
             }
@@ -79,6 +120,10 @@ class SendPushNotificationJob implements ShouldQueue
         if ($attempted) {
             $notification->update([
                 'sent_at' => now(),
+            ]);
+
+            Log::info('Push notification job marked notification sent_at after send attempt.', [
+                'notification_id' => $notification->id,
             ]);
         }
     }
@@ -99,12 +144,19 @@ class SendPushNotificationJob implements ShouldQueue
     private function isInvalidTokenResponse(mixed $payload): bool
     {
         if (is_string($payload)) {
+            $lowerPayload = strtolower($payload);
+
             return str_contains($payload, 'DeviceNotRegistered')
-                || str_contains($payload, 'not a registered push notification recipient');
+                || str_contains($lowerPayload, 'not a registered push notification recipient')
+                || str_contains($lowerPayload, 'invalid push token');
         }
 
         if (!is_array($payload)) {
             return false;
+        }
+
+        if (in_array('DeviceNotRegistered', $this->expoErrorCodes($payload), true)) {
+            return true;
         }
 
         foreach ($payload as $value) {
@@ -114,5 +166,74 @@ class SendPushNotificationJob implements ShouldQueue
         }
 
         return false;
+    }
+
+    private function hasExpoErrorResponse(mixed $payload): bool
+    {
+        if (is_string($payload)) {
+            return str_contains(strtolower($payload), 'error');
+        }
+
+        if (!is_array($payload)) {
+            return false;
+        }
+
+        if (($payload['status'] ?? null) === 'error') {
+            return true;
+        }
+
+        foreach ($payload as $value) {
+            if ($this->hasExpoErrorResponse($value)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function expoStatus(mixed $payload): ?string
+    {
+        if (!is_array($payload)) {
+            return null;
+        }
+
+        if (is_string($payload['status'] ?? null)) {
+            return $payload['status'];
+        }
+
+        if (is_array($payload['data'] ?? null)) {
+            return $this->expoStatus($payload['data']);
+        }
+
+        return null;
+    }
+
+    private function expoErrorCodes(mixed $payload): array
+    {
+        $codes = [];
+        $this->collectExpoErrorCodes($payload, $codes);
+
+        return array_values(array_unique($codes));
+    }
+
+    private function collectExpoErrorCodes(mixed $payload, array &$codes): void
+    {
+        if (!is_array($payload)) {
+            return;
+        }
+
+        if (is_string($payload['error'] ?? null)) {
+            $codes[] = $payload['error'];
+        }
+
+        if (is_array($payload['details'] ?? null)) {
+            $this->collectExpoErrorCodes($payload['details'], $codes);
+        }
+
+        foreach ($payload as $value) {
+            if (is_array($value)) {
+                $this->collectExpoErrorCodes($value, $codes);
+            }
+        }
     }
 }

@@ -39,7 +39,7 @@ class NewsController extends Controller
 
     public function store(NewsRequest $data)
     {
-        $this->newsService->store($data->validated());
+        $this->newsService->store($data->validated(), $data->user()?->id);
 
         return response()->json([
             'status' => 'success',
@@ -86,7 +86,7 @@ class NewsController extends Controller
                 'expires_at' => 'nullable|date',
             ]);
 
-            $updatedNews = $this->newsService->update($id, $validated);
+            $updatedNews = $this->newsService->update($id, $validated, $request->user()?->id);
 
             return response()->json([
                 'status' => 'success',
