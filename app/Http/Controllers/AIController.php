@@ -58,8 +58,10 @@ class AIController extends Controller
             $query = $request->input('query');
             $nResults = $request->input('n_results', 10);
 
-            $url = "{$this->pythonApiUrl}/search-exercises?query=" . urlencode($query) . "&n_results=" . $nResults;
-            $response = Http::post($url);
+            $response = Http::post("{$this->pythonApiUrl}/search-exercises", [
+                'query' => $query,
+                'n_results' => (int) $nResults,
+            ]);
 
             return response()->json($response->json(), $response->status());
         } catch (\Exception $e) {
@@ -70,13 +72,30 @@ class AIController extends Controller
 
     public function searchFoods(Request $request)
     {
+        $validated = $request->validate([
+            'query' => 'required|string',
+            'n_results' => 'sometimes|integer|min:1|max:50',
+        ]);
+
+        $payload = [
+            'query' => trim($validated['query']),
+            'n_results' => (int) ($validated['n_results'] ?? 10),
+        ];
+
+        if ($payload['query'] === '') {
+            return response()->json(['message' => 'The query field is required.'], 422);
+        }
+
         try {
-            $query = $request->input('query');
-            $nResults = $request->input('n_results', 10);
-            $url = "{$this->pythonApiUrl}/search-foods?query=" . urlencode($query) . "&n_results=" . $nResults;
+            $response = Http::asJson()->acceptJson()->post("{$this->pythonApiUrl}/search-foods", $payload);
 
-            $response = Http::post($url);  // استخدم GET مش POST
-
+            if (!$response->successful()) {
+                return response()->json([
+                    'error' => 'AI food search failed',
+                    'status' => $response->status(),
+                    'details' => $response->json() ?? $response->body(),
+                ], $response->status());
+            }
 
             return response()->json($response->json(), $response->status());
         } catch (\Exception $e) {
