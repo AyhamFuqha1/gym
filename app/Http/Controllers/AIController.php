@@ -22,6 +22,8 @@ use Log;
 
 class AIController extends Controller
 {
+    private const CHAT_UNAVAILABLE_MESSAGE = 'FitMind Assistant is temporarily unavailable. Please try again.';
+
     protected $pythonApiUrl;
     protected $userProgramService;
     protected $programVersionService;
@@ -37,6 +39,75 @@ class AIController extends Controller
         $this->userNutritionPlansService = $userNutritionPlansService;
         $this->NutritionVersionsService = $NutririonVersionService;
         $this->trainingPlanModificationService = $trainingPlanModificationService;
+    }
+
+    public function chat(Request $request)
+    {
+        $validated = $request->validate([
+            'message' => 'required|string|max:2000',
+        ]);
+
+        $message = trim($validated['message']);
+
+        if ($message === '') {
+            return response()->json([
+                'message' => 'The message field is required.',
+            ], 422);
+        }
+
+        $user = $request->user();
+
+        if (!$user) {
+            return response()->json([
+                'message' => 'Unauthenticated.',
+            ], 401);
+        }
+
+        $payload = [
+            'user_id' => $user->id,
+            'message' => $message,
+            'profile' => $this->chatProfileContext($user),
+            'injuries' => $this->chatInjuryContext($user),
+            'training_plan' => $this->chatTrainingPlanContext((int) $user->id),
+            'nutrition_plan' => $this->chatNutritionPlanContext((int) $user->id),
+        ];
+
+        try {
+            $response = Http::timeout(20)
+                ->asJson()
+                ->acceptJson()
+                ->post("{$this->pythonApiUrl}/chat", $payload);
+
+            if (!$response->successful()) {
+                Log::warning('AI Chat Error: non-successful response.', [
+                    'user_id' => $user->id,
+                    'status' => $response->status(),
+                    'body' => $response->body(),
+                ]);
+
+                return $this->chatUnavailableResponse();
+            }
+
+            $data = $response->json();
+
+            if (!is_array($data)) {
+                Log::warning('AI Chat Error: non-JSON response.', [
+                    'user_id' => $user->id,
+                    'status' => $response->status(),
+                    'body' => $response->body(),
+                ]);
+
+                return $this->chatUnavailableResponse();
+            }
+
+            return response()->json($data, $response->status());
+        } catch (\Throwable $e) {
+            Log::error('AI Chat Error: ' . $e->getMessage(), [
+                'user_id' => $user->id,
+            ]);
+
+            return $this->chatUnavailableResponse();
+        }
     }
 
     public function syncAll(Request $request)
@@ -393,6 +464,196 @@ class AIController extends Controller
             'liked_foods' => $user->likedFoods->pluck('name')->values()->toArray(),
             'disliked_foods' => $user->dislikedFoods->pluck('name')->values()->toArray(),
         ];
+    }
+
+    private function chatProfileContext(User $user): array
+    {
+        $user->loadMissing(['role', 'Profile', 'goals']);
+
+        $profile = $user->Profile;
+        $goalRecord = $user->goals instanceof \Illuminate\Support\Collection
+            ? $user->goals->first()
+            : $user->goals;
+
+        return [
+            'name' => $user->name,
+            'email' => $user->email,
+            'role' => $user->role?->name,
+            'age' => $profile?->age,
+            'gender' => $profile?->gender,
+            'height' => $profile?->height,
+            'weight' => $profile?->weight,
+            'activity_level' => $profile?->activity_level,
+            'goal' => $goalRecord?->goal_type,
+            'target_weight' => $goalRecord?->target_weight,
+            'preferences' => $profile?->preferences,
+            'food_allergies' => $profile?->food_allergies,
+            'medical_conditions' => $profile?->medical_conditions,
+        ];
+    }
+
+    private function chatInjuryContext(User $user): array
+    {
+        $user->loadMissing('injuriesActive');
+
+        return $user->injuriesActive
+            ->take(10)
+            ->map(fn ($injury) => [
+                'injury_type' => $injury->injury_type,
+                'severity' => $injury->severity,
+                'notes' => $injury->notes,
+                'status' => $injury->status,
+            ])
+            ->values()
+            ->all();
+    }
+
+    private function chatTrainingPlanContext(int $userId): ?array
+    {
+        $userProgram = UserProgram::with(['programVersion.exercises.exercise'])
+            ->where('user_id', $userId)
+            ->where('status', 'active')
+            ->orderByDesc('id')
+            ->first();
+
+        if (!$userProgram) {
+            $userProgram = UserProgram::with(['programVersion.exercises.exercise'])
+                ->where('user_id', $userId)
+                ->orderByDesc('id')
+                ->first();
+        }
+
+        if (!$userProgram) {
+            return null;
+        }
+
+        $programVersion = $userProgram->programVersion;
+
+        if (!$programVersion) {
+            $programVersion = ProgramVersion::with(['exercises.exercise'])
+                ->where('user_program_id', $userProgram->id)
+                ->where('is_active', 'accepted')
+                ->orderByDesc('id')
+                ->first();
+        }
+
+        if ($programVersion) {
+            $programVersion->loadMissing(['exercises.exercise']);
+        }
+
+        $exercises = $programVersion?->exercises ?? collect();
+
+        return [
+            'user_program_id' => $userProgram->id,
+            'program_version_id' => $programVersion?->id,
+            'name' => $programVersion?->name,
+            'level' => $programVersion?->level,
+            'status' => $userProgram->status,
+            'start_date' => $this->dateForChatPayload($userProgram->start_date),
+            'end_date' => $this->dateForChatPayload($userProgram->end_date),
+            'source_type' => $programVersion?->source_type,
+            'days_per_week' => $exercises
+                ->pluck('day_number')
+                ->filter(fn ($day) => $day !== null)
+                ->unique()
+                ->count(),
+            'exercise_count' => $exercises->count(),
+            'sample_exercises' => $exercises
+                ->take(8)
+                ->map(fn ($programExercise) => [
+                    'name' => $programExercise->exercise?->name,
+                    'day_number' => $programExercise->day_number,
+                    'sets' => $programExercise->sets,
+                    'reps' => $programExercise->reps,
+                    'difficulty' => $programExercise->difficulty,
+                ])
+                ->values()
+                ->all(),
+        ];
+    }
+
+    private function chatNutritionPlanContext(int $userId): ?array
+    {
+        $nutritionPlan = UserNutritionPlans::where('user_id', $userId)
+            ->where('active', 'active')
+            ->orderByDesc('id')
+            ->first();
+
+        if (!$nutritionPlan) {
+            $nutritionPlan = UserNutritionPlans::where('user_id', $userId)
+                ->orderByDesc('id')
+                ->first();
+        }
+
+        if (!$nutritionPlan) {
+            return null;
+        }
+
+        $nutritionVersion = NutritionVersions::with(['foodItems.nutrition'])
+            ->where('user_nutrition_plan_id', $nutritionPlan->id)
+            ->where('is_active', 'active')
+            ->orderByDesc('id')
+            ->first();
+
+        if (!$nutritionVersion) {
+            $nutritionVersion = NutritionVersions::with(['foodItems.nutrition'])
+                ->where('user_nutrition_plan_id', $nutritionPlan->id)
+                ->orderByDesc('id')
+                ->first();
+        }
+
+        $foodItems = $nutritionVersion?->foodItems ?? collect();
+
+        return [
+            'user_nutrition_plan_id' => $nutritionPlan->id,
+            'nutrition_version_id' => $nutritionVersion?->id,
+            'name' => $nutritionPlan->name,
+            'goal_type' => $nutritionPlan->goal_type,
+            'status' => $nutritionPlan->active,
+            'start_date' => $this->dateForChatPayload($nutritionPlan->start_date),
+            'end_date' => $this->dateForChatPayload($nutritionPlan->end_date),
+            'daily_calories' => $nutritionVersion?->daily_calories,
+            'daily_protein' => $nutritionVersion?->daily_protein,
+            'daily_carbs' => $nutritionVersion?->daily_carbs,
+            'daily_fat' => $nutritionVersion?->daily_fat,
+            'meal_types' => $foodItems
+                ->pluck('meal_type')
+                ->filter()
+                ->unique()
+                ->values()
+                ->all(),
+            'food_count' => $foodItems->count(),
+            'sample_foods' => $foodItems
+                ->take(8)
+                ->map(fn ($foodItem) => [
+                    'name' => $foodItem->nutrition?->name,
+                    'meal_type' => $foodItem->meal_type,
+                    'quantity' => $foodItem->quantity,
+                ])
+                ->values()
+                ->all(),
+        ];
+    }
+
+    private function chatUnavailableResponse()
+    {
+        return response()->json([
+            'status' => 'error',
+            'message' => self::CHAT_UNAVAILABLE_MESSAGE,
+        ], 503);
+    }
+
+    private function dateForChatPayload($date): ?string
+    {
+        if (!$date) {
+            return null;
+        }
+
+        if ($date instanceof \DateTimeInterface) {
+            return $date->format('Y-m-d');
+        }
+
+        return (string) $date;
     }
 
     private function saveTrainingPlan($userId, $planData)

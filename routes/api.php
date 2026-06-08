@@ -141,6 +141,7 @@ Route::middleware($memberProtectedMiddleware)->get('/dashboard', [DashBoardContr
 Route::middleware($memberProtectedMiddleware)->apiResource('user-goals', UserGoalController::class);
 
 /* AI + extra APIs from Ayham */
+Route::middleware('auth:sanctum')->post('/ai/chat', [AIController::class, 'chat']);
 Route::post('/ai/generate', [AIController::class, 'generateProgram']);////////////////////////
 Route::get('/subscriptionForAdmin', [SubscriptionController::class, 'show']);
 Route::post('/sync-all', [AIController::class, 'syncAll']);
