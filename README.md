@@ -333,9 +333,7 @@ This backend is part of the FitMind graduation project, an AI-powered gym manage
 
 Authors:
 
-- FitMind Graduation Project Team
-- Add team member names here
+- mahmoud yaseen
+- ayham fuqha
 
-License:
 
-No dedicated `LICENSE` file was found in this repository. Add a project license before public distribution.
